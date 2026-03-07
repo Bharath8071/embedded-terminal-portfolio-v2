@@ -7,7 +7,7 @@ const Neofetch = () => {
     <div className="flex flex-col lg:flex-row gap-4 lg:gap-12 py-4">
       <div className="shrink-0">
         {ascii.map((line, i) => (
-          <div key={i} className="text-terminal-accent text-xs sm:text-sm md:text-base leading-tight whitespace-pre">
+          <div key={i} className="text-terminal-accent text-sm sm:text-base md:text-lg lg:text-xl leading-tight whitespace-pre">
             {line}
           </div>
         ))}
