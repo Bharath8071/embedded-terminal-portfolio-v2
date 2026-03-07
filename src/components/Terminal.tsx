@@ -197,6 +197,8 @@ const Terminal = () => {
           </div>
         )}
       </div>
+
+      {phase === 'ready' && <CommandPanel onCommand={handlePanelCommand} />}
     </div>
   );
 };
