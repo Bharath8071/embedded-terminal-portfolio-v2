@@ -131,7 +131,7 @@ const Terminal = () => {
         {phase === 'boot' && <BootSequence onComplete={handleBootComplete} />}
 
         {phase === 'ready' && (
-          <div className="text-sm">
+          <div className="text-base">
             {entries.map((entry) => (
               <div key={entry.id} className="mb-2">
                 {entry.command !== undefined && (
