@@ -60,6 +60,9 @@ export default {
           accent: "hsl(var(--terminal-accent))",
           success: "hsl(var(--terminal-success))",
           warning: "hsl(var(--terminal-warning))",
+          panel: "hsl(var(--terminal-panel))",
+          "panel-text": "hsl(var(--terminal-panel-text))",
+          "panel-hover": "hsl(var(--terminal-panel-hover))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",

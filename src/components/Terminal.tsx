@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BootSequence from './BootSequence';
 import Neofetch from './Neofetch';
+import CommandPanel from './CommandPanel';
 import { executeCommand } from '@/lib/commands';
 
 interface TerminalEntry {
@@ -58,21 +59,20 @@ const Terminal = () => {
     setPhase('ready');
   }, []);
 
-  const handleSubmit = useCallback(() => {
-    const trimmed = input.trim();
-    const result = executeCommand(trimmed);
+  const runCommand = useCallback((cmd: string) => {
+    const result = executeCommand(cmd);
 
     if (result.type === 'clear') {
       setEntries([]);
       setInput('');
       setHistoryIndex(-1);
-      if (trimmed) setHistory(prev => [...prev, trimmed]);
+      if (cmd) setHistory(prev => [...prev, cmd]);
       return;
     }
 
     const newEntry: TerminalEntry = {
       id: entryCounter,
-      command: input,
+      command: cmd,
       output: result.type === 'neofetch' ? undefined : result.content,
       isNeofetch: result.type === 'neofetch',
     };
@@ -81,8 +81,17 @@ const Terminal = () => {
     setEntryCounter(prev => prev + 1);
     setInput('');
     setHistoryIndex(-1);
-    if (trimmed) setHistory(prev => [...prev, trimmed]);
-  }, [input, entryCounter]);
+    if (cmd) setHistory(prev => [...prev, cmd]);
+  }, [entryCounter]);
+
+  const handleSubmit = useCallback(() => {
+    runCommand(input.trim());
+  }, [input, runCommand]);
+
+  const handlePanelCommand = useCallback((cmd: string) => {
+    runCommand(cmd);
+    inputRef.current?.focus();
+  }, [runCommand]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -188,6 +197,8 @@ const Terminal = () => {
           </div>
         )}
       </div>
+
+      {phase === 'ready' && <CommandPanel onCommand={handlePanelCommand} />}
     </div>
   );
 };
