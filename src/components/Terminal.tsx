@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BootSequence from './BootSequence';
 import Neofetch from './Neofetch';
+import CommandPanel from './CommandPanel';
 import { executeCommand } from '@/lib/commands';
 
 interface TerminalEntry {
