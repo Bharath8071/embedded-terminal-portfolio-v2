@@ -45,6 +45,9 @@
     --terminal-accent: 212 100% 67%;
     --terminal-success: 130 52% 49%;
     --terminal-warning: 39 100% 60%;
+    --terminal-panel: 215 25% 11%;
+    --terminal-panel-text: 212 18% 80%;
+    --terminal-panel-hover: 212 100% 67%;
 
     --sidebar-background: 215 22% 11%;
     --sidebar-foreground: 212 18% 80%;
