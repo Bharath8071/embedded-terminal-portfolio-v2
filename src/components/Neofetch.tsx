@@ -4,15 +4,15 @@ const Neofetch = () => {
   const { ascii, info } = getNeofetchData();
 
   return (
-    <div className="flex flex-col lg:flex-row gap-2 lg:gap-8 py-2">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-12 py-4">
       <div className="shrink-0">
         {ascii.map((line, i) => (
-          <div key={i} className="text-terminal-accent text-[0.5rem] sm:text-xs leading-tight whitespace-pre">
+          <div key={i} className="text-terminal-accent text-xs sm:text-sm md:text-base leading-tight whitespace-pre">
             {line}
           </div>
         ))}
       </div>
-      <div className="flex flex-col justify-center text-sm">
+      <div className="flex flex-col justify-center text-base md:text-lg">
         {info.map((item, i) => {
           if (item.isHeader) {
             return (
