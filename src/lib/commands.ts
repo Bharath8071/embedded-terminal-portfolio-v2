@@ -59,22 +59,40 @@ export function executeCommand(input: string): CommandOutput {
           '┌─────────────────────────────────────────────┐',
           '│  Available Commands                         │',
           '├─────────────────────────────────────────────┤',
-          '│  about       → Who am I                    │',
-          '│  skills      → Technical skills             │',
-          '│  projects    → List all projects            │',
-          '│  project <n> → Project details              │',
-          '│  experience  → Work experience              │',
-          '│  certs       → Certifications               │',
-          '│  contact     → Get in touch                 │',
-          '│  github      → Open GitHub profile          │',
-          '│  linkedin    → Open LinkedIn profile        │',
-          '│  resume      → Download resume              │',
-          '│  neofetch    → Show system info             │',
-          '│  clear       → Clear terminal               │',
-          '│  help        → Show this message            │',
+          '│  all        → Show everything               │',
+          '│  about      → Who am I                      │',
+          '│  skills     → Technical skills               │',
+          '│  projects   → List all projects              │',
+          '│  project <n>→ Project details                │',
+          '│  experience → Work experience                │',
+          '│  certs      → Certifications                 │',
+          '│  contact    → Get in touch                   │',
+          '│  github     → Open GitHub profile            │',
+          '│  linkedin   → Open LinkedIn profile          │',
+          '│  resume     → Download resume                │',
+          '│  neofetch   → Show system info               │',
+          '│  clear      → Clear terminal                 │',
+          '│  help       → Show this message              │',
           '└─────────────────────────────────────────────┘',
         ],
       };
+
+    case 'all': {
+      const sections = ['about', 'skills', 'projects', 'experience', 'certs', 'contact'] as const;
+      const headers: Record<string, string> = {
+        about: 'ABOUT', skills: 'SKILLS', projects: 'PROJECTS',
+        experience: 'EXPERIENCE', certs: 'CERTIFICATIONS', contact: 'CONTACT',
+      };
+      const lines: string[] = [''];
+      for (const s of sections) {
+        lines.push(`  ══════════════════════════════════════════`);
+        lines.push(`  ## ${headers[s]}`);
+        lines.push(`  ══════════════════════════════════════════`);
+        const result = executeCommand(s);
+        lines.push(...result.content);
+      }
+      return { type: 'text', content: lines };
+    }
 
     case 'about':
       return {
