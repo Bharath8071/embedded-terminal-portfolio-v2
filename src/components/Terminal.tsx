@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import BootSequence from './BootSequence';
 import Neofetch from './Neofetch';
 import CommandPanel from './CommandPanel';
-import { executeCommand } from '@/lib/commands';
+import { executeCommand, AVAILABLE_COMMANDS } from '@/lib/commands';
 
 interface TerminalEntry {
   id: number;
@@ -19,6 +19,7 @@ const HINTS = [
   'Tip: type "neofetch"',
   'Tip: type "about" to learn more',
   'Tip: try "skills"',
+  'Tip: press TAB to autocomplete',
 ];
 
 const Terminal = () => {
@@ -96,6 +97,25 @@ const Terminal = () => {
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSubmit();
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      const partial = input.trim().toLowerCase();
+      if (!partial) return;
+      const matches = AVAILABLE_COMMANDS.filter(c => c.startsWith(partial));
+      if (matches.length === 1) {
+        setInput(matches[0]);
+      } else if (matches.length > 1) {
+        // Find common prefix
+        let prefix = matches[0];
+        for (const m of matches) {
+          while (!m.startsWith(prefix)) {
+            prefix = prefix.slice(0, -1);
+          }
+        }
+        if (prefix.length > partial.length) {
+          setInput(prefix);
+        }
+      }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (history.length === 0) return;
@@ -117,7 +137,7 @@ const Terminal = () => {
       e.preventDefault();
       setEntries([]);
     }
-  }, [handleSubmit, history, historyIndex]);
+  }, [handleSubmit, history, historyIndex, input]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background overflow-hidden scanline relative">
@@ -165,18 +185,28 @@ const Terminal = () => {
               <span className="text-terminal-muted">:</span>
               <span className="text-terminal-accent font-semibold">~</span>
               <span className="text-foreground">$ </span>
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="flex-1 bg-transparent outline-none text-foreground caret-terminal-success ml-1"
-                autoFocus
-                spellCheck={false}
-                autoComplete="off"
-                autoCapitalize="off"
-              />
+              <div className="relative flex-1 ml-1">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-full bg-transparent outline-none text-foreground caret-transparent"
+                  autoFocus
+                  spellCheck={false}
+                  autoComplete="off"
+                  autoCapitalize="off"
+                />
+                {/* Block cursor overlay */}
+                <span
+                  className="absolute top-0 left-0 pointer-events-none text-foreground whitespace-pre"
+                  aria-hidden="true"
+                >
+                  {input}
+                  <span className="inline-block w-[0.6em] h-[1.2em] bg-terminal-success/80 cursor-blink align-middle -mb-[0.1em]" />
+                </span>
+              </div>
             </div>
 
             {/* Rotating hint */}
