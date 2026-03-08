@@ -14,7 +14,7 @@ const ASCII_LOGO = [
 ];
 
 export const AVAILABLE_COMMANDS = [
-  'help', 'about', 'skills', 'projects', 'project',
+  'all', 'help', 'about', 'skills', 'projects', 'project',
   'experience', 'certs', 'contact', 'github', 'linkedin',
   'resume', 'clear', 'neofetch',
 ];
