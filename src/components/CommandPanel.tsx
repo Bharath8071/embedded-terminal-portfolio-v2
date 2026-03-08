@@ -7,25 +7,27 @@ const COMMANDS_ROW2 = ['resume', 'github', 'linkedin', 'contact'];
 
 const CommandPanel = ({ onCommand }: CommandPanelProps) => {
   return (
-    <div className="shrink-0 bg-terminal-panel border-t border-border px-4 py-3">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+    <div className="shrink-0 border-t border-border px-6 py-2 bg-background">
+      <div className="flex justify-center gap-6 font-mono text-sm text-terminal-muted">
         {COMMANDS_ROW1.map((cmd) => (
-          <button
+          <span
             key={cmd}
             onClick={() => onCommand(cmd)}
-            className="px-3 py-1.5 text-sm font-mono text-terminal-panel-text bg-background rounded border border-border hover:text-terminal-panel-hover hover:border-terminal-panel-hover transition-colors duration-150 cursor-pointer"
+            className="cursor-pointer hover:text-terminal-accent transition-colors duration-150"
           >
             {cmd}
-          </button>
+          </span>
         ))}
+      </div>
+      <div className="flex justify-center gap-6 font-mono text-sm text-terminal-muted mt-1">
         {COMMANDS_ROW2.map((cmd) => (
-          <button
+          <span
             key={cmd}
             onClick={() => onCommand(cmd)}
-            className="px-3 py-1.5 text-sm font-mono text-terminal-panel-text bg-background rounded border border-border hover:text-terminal-panel-hover hover:border-terminal-panel-hover transition-colors duration-150 cursor-pointer"
+            className="cursor-pointer hover:text-terminal-accent transition-colors duration-150"
           >
             {cmd}
-          </button>
+          </span>
         ))}
       </div>
     </div>
