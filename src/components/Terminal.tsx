@@ -228,7 +228,7 @@ const Terminal = () => {
         )}
       </div>
 
-      {/* Removed command panel */}
+      {phase === 'ready' && <CommandPanel onCommand={handlePanelCommand} />}
     </div>
   );
 };
