@@ -13,10 +13,8 @@ interface TerminalEntry {
 }
 
 const HINTS = [
+  'Tip: click a command below or type it manually',
   'Tip: type "help" to see commands',
-  'Tip: try "projects"',
-  'Tip: press ↑ for command history',
-  'Tip: type "neofetch"',
   'Tip: type "about" to learn more',
   'Tip: try "skills"',
   'Tip: press TAB to autocomplete',
