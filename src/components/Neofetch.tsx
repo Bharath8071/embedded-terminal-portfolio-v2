@@ -1,18 +1,26 @@
 import { getNeofetchData } from '@/lib/commands';
 
 const Neofetch = () => {
-  const { ascii, info } = getNeofetchData();
+  const { asciiLetters, info } = getNeofetchData();
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:gap-12 py-4">
-      <div className="shrink-0">
-        {ascii.map((line, i) => (
-          <div key={i} className="text-terminal-accent text-sm sm:text-base md:text-lg lg:text-xl leading-tight whitespace-pre">
-            {line}
+    <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-12 py-4">
+      <div
+        className="shrink-0 grid grid-flow-col auto-cols-max gap-x-3.5 place-items-start font-mono text-terminal-accent text-sm sm:text-base md:text-lg lg:text-xl whitespace-pre select-none"
+        aria-label="BHARATH logo"
+      >
+        {asciiLetters.map((letterLines, letterIdx) => (
+          <div key={letterIdx} className="grid grid-rows-6 items-start">
+            {letterLines.map((line, lineIdx) => (
+              <div key={lineIdx} className="leading-[1.29]">
+                {line}
+              </div>
+            ))}
           </div>
         ))}
       </div>
-      <div className="flex flex-col justify-center text-base md:text-lg">
+
+      <div className="flex flex-col text-base md:text-lg">
         {info.map((item, i) => {
           if (item.isHeader) {
             return (

@@ -14,9 +14,6 @@ interface TerminalEntry {
 
 const HINTS = [
   'Tip: click a command below or type it manually',
-  'Tip: type "help" to see commands',
-  'Tip: type "about" to learn more',
-  'Tip: try "skills"',
   'Tip: press TAB to autocomplete',
 ];
 
@@ -36,7 +33,7 @@ const Terminal = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setHintIndex(prev => (prev + 1) % HINTS.length);
-    }, 4000);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
