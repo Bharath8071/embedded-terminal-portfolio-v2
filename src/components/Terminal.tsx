@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, KeyboardEvent, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BootSequence from './BootSequence';
 import Neofetch from './Neofetch';
@@ -11,6 +11,12 @@ interface TerminalEntry {
   output?: string[];
   isNeofetch?: boolean;
 }
+
+const MARKDOWN_LINK = /\[([^\]]+)\]\((https?:\/\/[^\s]+)\)/g;
+
+const URL_PATTERN = /(https?:\/\/[^\s]+|(?:github|linkedin)\.com\/[^\s]+)/g;
+
+const toHref = (text: string) => (text.startsWith('http') ? text : `https://${text}`);
 
 const HINTS = [
   'Tip: click a command below or type it manually',
@@ -168,9 +174,109 @@ const Terminal = () => {
                   </div>
                 )}
                 {entry.isNeofetch && <Neofetch />}
-                {entry.output && entry.output.map((line, i) => (
-                  <div key={i} className="text-foreground whitespace-pre">{line}</div>
-                ))}
+                {entry.output && entry.output.map((line, i) => {
+                  // 1) Markdown-style links: [label](https://example.com)
+                  const mdMatches = [...line.matchAll(MARKDOWN_LINK)];
+                  if (mdMatches.length > 0) {
+                    const parts: ReactNode[] = [];
+                    let last = 0;
+
+                    mdMatches.forEach((match, idx) => {
+                      const full = match[0];
+                      const label = match[1];
+                      const url = match[2];
+                      const start = match.index ?? 0;
+
+                      if (start > last) {
+                        parts.push(
+                          <span key={`l${i}-md-t-${idx}`}>
+                            {line.slice(last, start)}
+                          </span>
+                        );
+                      }
+
+                      parts.push(
+                        <a
+                          key={`l${i}-md-l-${idx}`}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-terminal-accent underline hover:text-terminal-success cursor-pointer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {label}
+                        </a>
+                      );
+
+                      last = start + full.length;
+                    });
+
+                    if (last < line.length) {
+                      parts.push(
+                        <span key={`l${i}-md-tail`}>
+                          {line.slice(last)}
+                        </span>
+                      );
+                    }
+
+                    return (
+                      <div key={i} className="text-foreground whitespace-pre">
+                        {parts}
+                      </div>
+                    );
+                  }
+
+                  // 2) Fallback: auto-detect raw URLs (existing behavior)
+                  const matches = [...line.matchAll(URL_PATTERN)];
+                  if (matches.length === 0) {
+                    return <div key={i} className="text-foreground whitespace-pre">{line}</div>;
+                  }
+
+                  const parts: ReactNode[] = [];
+                  let last = 0;
+
+                  matches.forEach((match, idx) => {
+                    const text = match[0];
+                    const start = match.index ?? 0;
+
+                    if (start > last) {
+                      parts.push(
+                        <span key={`l${i}-t-${idx}`}>
+                          {line.slice(last, start)}
+                        </span>
+                      );
+                    }
+
+                    parts.push(
+                      <a
+                        key={`l${i}-l-${idx}`}
+                        href={toHref(text)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-terminal-accent underline decoration-dotted hover:text-terminal-success"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {text}
+                      </a>
+                    );
+
+                    last = start + text.length;
+                  });
+
+                  if (last < line.length) {
+                    parts.push(
+                      <span key={`l${i}-tail`}>
+                        {line.slice(last)}
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <div key={i} className="text-foreground whitespace-pre">
+                      {parts}
+                    </div>
+                  );
+                })}
               </div>
             ))}
 
