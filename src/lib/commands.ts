@@ -135,16 +135,22 @@ export function executeCommand(input: string): CommandOutput {
       };
 
     case 'all': {
-      const sections = ['about', 'skills', 'projects', 'experience', 'certs', 'contact'] as const;
+      const sections = ['about', 'skills', 'projects','project 1','project 2','project 3','project 4', 'experience', 'certs', 'contact'] as const;
       const headers: Record<string, string> = {
-        about: 'ABOUT', skills: 'SKILLS', projects: 'PROJECTS',
+        about: 'ABOUT', skills: 'SKILLS', projects: 'PROJECTS', 
+        'project 1': 'PROJECT 1', 'project 2': 'PROJECT 2', 'project 3': 'PROJECT 3' ,'project 4': 'PROJECT 4',
         experience: 'EXPERIENCE', certs: 'CERTIFICATIONS', contact: 'CONTACT',
       };
       const lines: string[] = [''];
       for (const s of sections) {
-        lines.push(`  ══════════════════════════════════════════`);
-        lines.push(`  ## ${headers[s]}`);
-        lines.push(`  ══════════════════════════════════════════`);
+
+        // lines.push(`  ══════════════════════════════════════════`);
+        // lines.push(`  ## ${headers[s]}`);
+        // lines.push(`  `);
+        // lines.push(`  ————————————————————————————————————————————————————————————————————————————————————————————`);
+        lines.push(`  `);
+        // lines.push(`  ══════════════════════════════════════════`);
+        // lines.push(`  ══════════════════════════════════════════`);
         const result = executeCommand(s);
         lines.push(...result.content);
       }
@@ -402,21 +408,33 @@ export function executeCommand(input: string): CommandOutput {
     };
 
     case 'certs':
-      return {
-        type: 'text',
-        content: [
-          '',
-          '  Certifications:',
-          '  ───────────────',
-          '  ✓  AWS Academy Gen AI Foundation',
-          '  ✓  Edge AI – Edge Impulse',
-          '  ✓  Generative AI – LinkedIn Learning',
-          '  ✓  MySQL for Data Management – LinkedIn Learning',
-          '  ✓  Python Programming – PrepInsta',
-          '  ✓  Introduction to Soft Skills – TCS iON',
-          '',
-        ],
-      };
+       return {
+         type: 'text',
+         content: [
+           '',
+           '  ┌── Certifications ───────────────────────────────────────────┐',
+           '  │                                                             │',
+           '  │  ▸ AWS Academy – Generative AI Foundation                   │',
+           '  │    • Fundamentals of AI and cloud-based model deployment    │',
+           '  │                                                             │',
+           '  │  ▸ Edge AI – Edge Impulse Platform                          │',
+           '  │    • TinyML concepts and on-device ML integration           │',
+           '  │                                                             │',
+           '  │  ▸ LinkedIn Learning                                        │',
+           '  │    • Generative AI                                          │',
+           '  │    • MySQL for Data Management                              │',
+           '  │                                                             │',
+           '  │  ▸ TCS iON                                                  │',
+           '  │    • Soft Skills Training                                   │',
+           '  │                                                             │',
+           '  │  ▸ PrepInsta                                                │',
+           '  │    • C Programming                                          │',
+           '  │    • Python Programming                                     │',
+           '  │                                                             │',
+           '  └─────────────────────────────────────────────────────────────┘',
+           '',
+         ],
+       };
 
     case 'contact':
       return {
@@ -425,9 +443,11 @@ export function executeCommand(input: string): CommandOutput {
           '',
           '  ╭── Contact ───────────────────────────────────────╮',
           '  │                                                  │',
-          '  │  Email:    bharathmani8071@gmail.com             │',
-          '  │  GitHub:   github.com/Bharath8071                │',
+          '  │  Email:    [bharathmani8071@gmail.com](mailto:bharathmani8071@gmail.com)             │',
           '  │  LinkedIn: linkedin.com/in/bharath-mani          │',
+          '  │  GitHub:   github.com/Bharath8071                │',
+          '  │  Contact:  +91 9150198071                        │',
+          '  │  Location: Coimbatore, India                     │',
           '  │                                                  │',
           '  ╰──────────────────────────────────────────────────╯',
           '',
@@ -442,8 +462,27 @@ export function executeCommand(input: string): CommandOutput {
       window.open('https://www.linkedin.com/in/bharath-mani', '_blank');
       return { type: 'text', content: ['', '  Opening LinkedIn profile...', ''] };
 
+    // case 'resume': {
+    //   const link = document.createElement('a');
+    //   link.href = '/Bharath_Resume.pdf';
+    //   link.download = 'Bharath_Resume.pdf';
+    //   document.body.appendChild(link);
+    //   link.click();
+    //   document.body.removeChild(link);
+    
+    //   return {
+    //     type: 'text',
+    //     content: ['', '  Downloading resume...', ''],
+    //   };
+    // }
+
     case 'resume':
-      return { type: 'text', content: ['', '  ⚠ Resume download will be available soon.', ''] };
+      window.open('/Bharath_Resume.pdf', '_blank');
+      return {
+        type: 'text',
+        content: ['', '  Opening resume...', ''],
+      };
+    return { type: 'text', content: ['', '  ⚠ Resume download will be available soon.', ''] };
 
     case 'clear':
       return { type: 'clear', content: [] };

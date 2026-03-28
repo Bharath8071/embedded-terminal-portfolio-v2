@@ -12,7 +12,8 @@ interface TerminalEntry {
   isNeofetch?: boolean;
 }
 
-const MARKDOWN_LINK = /\[([^\]]+)\]\((https?:\/\/[^\s]+)\)/g;
+// const MARKDOWN_LINK = /\[([^\]]+)\]\((https?:\/\/[^\s]+)\)/g;
+const MARKDOWN_LINK = /\[([^\]]+)\]\(((https?:\/\/|mailto:)[^\s]+)\)/g;
 
 const URL_PATTERN = /(https?:\/\/[^\s]+|(?:github|linkedin)\.com\/[^\s]+)/g;
 
@@ -31,6 +32,7 @@ const Terminal = () => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [hintIndex, setHintIndex] = useState(0);
   const [entryCounter, setEntryCounter] = useState(0);
+  const [showInput, setShowInput] = useState(true);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -48,7 +50,7 @@ const Terminal = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [entries, phase]);
+  }, [entries, phase, showInput]);
 
   // Focus input
   const focusInput = useCallback(() => {
@@ -61,9 +63,19 @@ const Terminal = () => {
     setPhase('ready');
   }, []);
 
+  // const runCommand = useCallback((cmd: string) => {
+  //   const result = executeCommand(cmd);
+
+  //   if (result.type === 'clear') {
+  //     setEntries([]);
+  //     setInput('');
+  //     setHistoryIndex(-1);
+  //     if (cmd) setHistory(prev => [...prev, cmd]);
+  //     return;
+  //   }
   const runCommand = useCallback((cmd: string) => {
     const result = executeCommand(cmd);
-
+  
     if (result.type === 'clear') {
       setEntries([]);
       setInput('');
@@ -71,19 +83,26 @@ const Terminal = () => {
       if (cmd) setHistory(prev => [...prev, cmd]);
       return;
     }
-
+  
     const newEntry: TerminalEntry = {
       id: entryCounter,
       command: cmd,
       output: result.type === 'neofetch' ? undefined : result.content,
       isNeofetch: result.type === 'neofetch',
     };
-
+  
     setEntries(prev => [...prev, newEntry]);
     setEntryCounter(prev => prev + 1);
     setInput('');
     setHistoryIndex(-1);
     if (cmd) setHistory(prev => [...prev, cmd]);
+  
+    // 🔥 ADD THIS PART
+    setShowInput(false);
+  
+    setTimeout(() => {
+      setShowInput(true);
+    }, 400);
   }, [entryCounter]);
 
   const handleSubmit = useCallback(() => {
@@ -156,6 +175,7 @@ const Terminal = () => {
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 cursor-text"
+        // className="flex-1 overflow-y-auto p-4 cursor-text flex flex-col justify-end"
         onClick={focusInput}
       >
         {phase === 'boot' && <BootSequence onComplete={handleBootComplete} />}
@@ -281,50 +301,56 @@ const Terminal = () => {
             ))}
 
             {/* Input line */}
-            <div className="flex items-center">
-              <span className="text-terminal-success font-semibold">bharath@portfolio</span>
-              <span className="text-terminal-muted">:</span>
-              <span className="text-terminal-accent font-semibold">~</span>
-              <span className="text-foreground">$ </span>
-              <div className="relative flex-1 ml-1">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="w-full bg-transparent outline-none text-foreground caret-transparent"
-                  autoFocus
-                  spellCheck={false}
-                  autoComplete="off"
-                  autoCapitalize="off"
-                />
-                {/* Block cursor overlay */}
-                <span
-                  className="absolute top-0 left-0 pointer-events-none text-foreground whitespace-pre"
-                  aria-hidden="true"
-                >
-                  {input}
-                  <span className="inline-block w-[0.6em] h-[1.2em] bg-terminal-success/80 cursor-blink align-middle -mb-[0.1em]" />
-                </span>
+            {showInput && (
+              <div className="flex items-center">
+
+                <span className="text-terminal-success font-semibold">bharath@kernel-dev</span>
+                <span className="text-terminal-muted">:</span>
+                <span className="text-terminal-accent font-semibold">~</span>
+                <span className="text-foreground">$ </span>
+                <div className="relative flex-1 ml-1">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="w-full bg-transparent outline-none text-foreground caret-transparent"
+                    autoFocus
+                    spellCheck={false}
+                    autoComplete="off"
+                    autoCapitalize="off"
+                  />
+                  {/* Block cursor overlay */}
+                  <span
+                    className="absolute top-0 left-0 pointer-events-none text-foreground whitespace-pre"
+                    aria-hidden="true"
+                  >
+                    {input}
+                    <span className="inline-block w-[0.6em] h-[1.2em] bg-terminal-success/80 cursor-blink align-middle -mb-[0.1em]" />
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Rotating hint */}
-            <div className="mt-4 h-5">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={hintIndex}
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 0.5, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-xs text-terminal-muted italic"
-                >
-                  {HINTS[hintIndex]}
-                </motion.div>
-              </AnimatePresence>
-            </div>
+            {showInput && (
+              <div className="mt-4 h-5">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={hintIndex}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 0.5, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-xs text-terminal-muted italic"
+                  >
+                    {HINTS[hintIndex]}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            )
+          } 
           </div>
         )}
       </div>
