@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, KeyboardEvent, ReactNode } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback, KeyboardEvent, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BootSequence from './BootSequence';
 import Neofetch from './Neofetch';
@@ -19,23 +19,90 @@ const URL_PATTERN = /(https?:\/\/[^\s]+|(?:github|linkedin)\.com\/[^\s]+)/g;
 
 const toHref = (text: string) => (text.startsWith('http') ? text : `https://${text}`);
 
+const GHOST_ROTATE_MS = 3000;
+
 const HINTS = [
   'Tip: click a command below or type it manually',
   'Tip: press TAB to autocomplete',
+];
+
+// Predefined ordered flow of commands for guided experience
+const FLOW_COMMANDS = [
+  'about', 'skills', 'projects', 'project 1', 'project 2', 'project 3', 'project 4', 
+  'experience', 'certs', 'contact', 'resume'
 ];
 
 const Terminal = () => {
   const [phase, setPhase] = useState<'boot' | 'ready'>('boot');
   const [entries, setEntries] = useState<TerminalEntry[]>([]);
   const [input, setInput] = useState('');
+  const [baseInput, setBaseInput] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [hintIndex, setHintIndex] = useState(0);
   const [entryCounter, setEntryCounter] = useState(0);
   const [showInput, setShowInput] = useState(true);
+  const [matches, setMatches] = useState<string[]>([]);
+  const [suggestIndex, setSuggestIndex] = useState(0);
+
+  // Flow suggestion state
+  const [lastExecutedCommand, setLastExecutedCommand] = useState<string>('');
+  const [currentFlowIndex, setCurrentFlowIndex] = useState(0);
+  const [isFlowActive, setIsFlowActive] = useState(true);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const ghostSuffix = useMemo(() => {
+    if (matches.length === 0) return '';
+    const candidate = matches[suggestIndex % matches.length];
+    const base = baseInput.trim().toLowerCase();
+    if (!base || !candidate.startsWith(base)) return '';
+    return candidate.slice(base.length);
+  }, [matches, suggestIndex, baseInput]);
+
+  // Get the current flow suggestion
+  const flowSuggestion = useMemo(() => {
+    if (!isFlowActive || currentFlowIndex >= FLOW_COMMANDS.length) return '';
+    return FLOW_COMMANDS[currentFlowIndex];
+  }, [isFlowActive, currentFlowIndex]);
+
+  // Get the flow ghost suffix (remaining part after current input)
+  const flowGhostSuffix = useMemo(() => {
+    if (!flowSuggestion) return '';
+    const base = baseInput.trim().toLowerCase();
+    const suggestionLower = flowSuggestion.toLowerCase();
+    
+    // If input is empty, show the full suggestion
+    if (!base) return flowSuggestion;
+    
+    // If input matches the start of suggestion, show remaining part
+    if (suggestionLower.startsWith(base)) {
+      return flowSuggestion.slice(base.length);
+    }
+    
+    // If input doesn't match, don't show flow suggestion
+    return '';
+  }, [flowSuggestion, baseInput]);
+
+  useEffect(() => {
+    const normalizedBaseInput = baseInput.trim().toLowerCase();
+    if (!normalizedBaseInput) {
+      setMatches([]);
+    } else {
+      setMatches(AVAILABLE_COMMANDS.filter((command) => command.startsWith(normalizedBaseInput)));
+    }
+    setSuggestIndex(0);
+  }, [baseInput]);
+
+  // Auto-rotate ghost through prefix matches every 2s (loops)
+  useEffect(() => {
+    if (matches.length === 0) return;
+    const id = window.setInterval(() => {
+      setSuggestIndex((prev) => (prev + 1) % matches.length);
+    }, GHOST_ROTATE_MS);
+    return () => window.clearInterval(id);
+  }, [matches]);
 
   // Rotate hints
   useEffect(() => {
@@ -77,12 +144,25 @@ const Terminal = () => {
     const result = executeCommand(cmd);
   
     if (result.type === 'clear') {
-      setEntries([]);
-      setInput('');
-      setHistoryIndex(-1);
-      if (cmd) setHistory(prev => [...prev, cmd]);
-      return;
-    }
+        setEntries([]);
+        setInput('');
+        setBaseInput('');
+        setHistoryIndex(-1);
+        setMatches([]);
+        setSuggestIndex(0);
+        setIsFlowActive(false);
+        setCurrentFlowIndex(0); // or -1 (better)
+        // setProjectGhostActive(false);
+        // setProjectGhostSeq(1);
+
+        if (result.next === 'neofetch') {
+          setEntries([{ id: 0, isNeofetch: true }]);
+          setEntryCounter(1);
+        }
+      
+        if (cmd) setHistory(prev => [...prev, cmd]);
+        return;
+      }
   
     const newEntry: TerminalEntry = {
       id: entryCounter,
@@ -94,20 +174,57 @@ const Terminal = () => {
     setEntries(prev => [...prev, newEntry]);
     setEntryCounter(prev => prev + 1);
     setInput('');
+    setBaseInput('');
+    setMatches([]);
+    setSuggestIndex(0);
     setHistoryIndex(-1);
     if (cmd) setHistory(prev => [...prev, cmd]);
   
-    // 🔥 ADD THIS PART
+    // Update flow state
+    const normalizedCmd = cmd.trim().toLowerCase();
+    setLastExecutedCommand(normalizedCmd);
+    
+    // Check if command matches expected next in flow
+    if (isFlowActive && currentFlowIndex < FLOW_COMMANDS.length) {
+      const expectedNext = FLOW_COMMANDS[currentFlowIndex].toLowerCase();
+      if (normalizedCmd === expectedNext) {
+        // Advance flow
+        setCurrentFlowIndex(prev => prev + 1);
+      } else {
+        // Break flow if command doesn't match expected next
+        setIsFlowActive(false);
+      }
+    } else if (normalizedCmd === 'about' && !isFlowActive) {
+      // Restart flow if 'about' is executed when flow is broken
+      setIsFlowActive(true);
+      setCurrentFlowIndex(1); // Set to 1 since 'about' was just executed
+    }
+  
     setShowInput(false);
   
     setTimeout(() => {
       setShowInput(true);
-    }, 400);
-  }, [entryCounter]);
+    }, 100);
+  }, [entryCounter, isFlowActive, currentFlowIndex]);
+
+  const getSelectedSuggestion = useCallback(() => {
+    // Prioritize flow suggestion if available
+    if (flowSuggestion) {
+      const base = baseInput.trim().toLowerCase();
+      if (!base || flowSuggestion.toLowerCase().startsWith(base)) {
+        return flowSuggestion;
+      }
+    }
+    
+    // Fall back to generic autocomplete
+    if (matches.length === 0) return '';
+    return matches[suggestIndex % matches.length];
+  }, [matches, suggestIndex, flowSuggestion, baseInput]);
 
   const handleSubmit = useCallback(() => {
-    runCommand(input.trim());
-  }, [input, runCommand]);
+    const selectedSuggestion = getSelectedSuggestion();
+    runCommand((selectedSuggestion || input).trim());
+  }, [getSelectedSuggestion, input, runCommand]);
 
   const handlePanelCommand = useCallback((cmd: string) => {
     runCommand(cmd);
@@ -119,29 +236,24 @@ const Terminal = () => {
       handleSubmit();
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      const partial = input.trim().toLowerCase();
-      if (!partial) return;
-      const matches = AVAILABLE_COMMANDS.filter(c => c.startsWith(partial));
-      if (matches.length === 1) {
-        setInput(matches[0]);
-      } else if (matches.length > 1) {
-        // Find common prefix
-        let prefix = matches[0];
-        for (const m of matches) {
-          while (!m.startsWith(prefix)) {
-            prefix = prefix.slice(0, -1);
-          }
-        }
-        if (prefix.length > partial.length) {
-          setInput(prefix);
-        }
-      }
+      const chosen = getSelectedSuggestion();
+      if (!chosen) return;
+      setInput(chosen);
+      setBaseInput(chosen);
+    } else if (e.key === 'ArrowRight') {
+      const chosen = getSelectedSuggestion();
+      if (!chosen) return;
+      e.preventDefault();
+      setInput(chosen);
+      setBaseInput(chosen);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (history.length === 0) return;
       const newIndex = historyIndex === -1 ? history.length - 1 : Math.max(0, historyIndex - 1);
       setHistoryIndex(newIndex);
-      setInput(history[newIndex]);
+      const historyValue = history[newIndex];
+      setInput(historyValue);
+      setBaseInput(historyValue);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       if (historyIndex === -1) return;
@@ -149,41 +261,44 @@ const Terminal = () => {
       if (newIndex >= history.length) {
         setHistoryIndex(-1);
         setInput('');
+        setBaseInput('');
       } else {
         setHistoryIndex(newIndex);
-        setInput(history[newIndex]);
+        const historyValue = history[newIndex];
+        setInput(historyValue);
+        setBaseInput(historyValue);
       }
     } else if (e.key === 'l' && e.ctrlKey) {
       e.preventDefault();
       setEntries([]);
     }
-  }, [handleSubmit, history, historyIndex, input]);
+  }, [getSelectedSuggestion, handleSubmit, history, historyIndex]);
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-background overflow-hidden scanline relative">
+    <div className="h-screen w-screen flex flex-col bg-background overflow-hidden scanline relative text-sm sm:text-base">
       {/* Terminal header */}
-      <div className="flex items-center gap-2 px-4 py-2 bg-terminal-header border-b border-border shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-terminal-header border-b border-border shrink-0">
         <div className="flex gap-1.5">
           <div className="w-3 h-3 rounded-full bg-red-500/80" />
           <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
           <div className="w-3 h-3 rounded-full bg-green-500/80" />
         </div>
-        <span className="text-terminal-muted text-sm ml-2">bharath@portfolio:~</span>
+        <span className="text-terminal-muted text-xs sm:text-sm ml-1.5 sm:ml-2">bharath@portfolio:~</span>
       </div>
 
       {/* Terminal body */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 cursor-text"
+        className="flex-1 overflow-y-auto p-2 sm:p-4 cursor-text"
         // className="flex-1 overflow-y-auto p-4 cursor-text flex flex-col justify-end"
         onClick={focusInput}
       >
         {phase === 'boot' && <BootSequence onComplete={handleBootComplete} />}
 
         {phase === 'ready' && (
-          <div className="text-base">
+          <div className="text-sm sm:text-base">
             {entries.map((entry) => (
-              <div key={entry.id} className="mb-2">
+              <div key={entry.id} className="mb-1.5 sm:mb-2">
                 {entry.command !== undefined && (
                   <div>
                     <span className="text-terminal-success font-semibold">bharath@portfolio</span>
@@ -240,7 +355,7 @@ const Terminal = () => {
                     }
 
                     return (
-                      <div key={i} className="text-foreground whitespace-pre">
+                      <div key={i} className="text-foreground whitespace-pre-wrap break-words">
                         {parts}
                       </div>
                     );
@@ -249,7 +364,7 @@ const Terminal = () => {
                   // 2) Fallback: auto-detect raw URLs (existing behavior)
                   const matches = [...line.matchAll(URL_PATTERN)];
                   if (matches.length === 0) {
-                    return <div key={i} className="text-foreground whitespace-pre">{line}</div>;
+                    return <div key={i} className="text-foreground whitespace-pre-wrap break-words">{line}</div>;
                   }
 
                   const parts: ReactNode[] = [];
@@ -292,7 +407,7 @@ const Terminal = () => {
                   }
 
                   return (
-                    <div key={i} className="text-foreground whitespace-pre">
+                    <div key={i} className="text-foreground whitespace-pre-wrap break-words">
                       {parts}
                     </div>
                   );
@@ -302,20 +417,24 @@ const Terminal = () => {
 
             {/* Input line */}
             {showInput && (
-              <div className="flex items-center">
+              <div className="flex items-center text-sm sm:text-base">
 
                 <span className="text-terminal-success font-semibold">bharath@kernel-dev</span>
                 <span className="text-terminal-muted">:</span>
                 <span className="text-terminal-accent font-semibold">~</span>
                 <span className="text-foreground">$ </span>
-                <div className="relative flex-1 ml-1">
+                <div className="relative flex-1 ml-1 min-w-0">
                   <input
                     ref={inputRef}
                     type="text"
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      setInput(nextValue);
+                      setBaseInput(nextValue);
+                    }}
                     onKeyDown={handleKeyDown}
-                    className="w-full bg-transparent outline-none text-foreground caret-transparent"
+                    className="w-full bg-transparent outline-none text-foreground caret-transparent text-sm sm:text-base"
                     autoFocus
                     spellCheck={false}
                     autoComplete="off"
@@ -323,11 +442,16 @@ const Terminal = () => {
                   />
                   {/* Block cursor overlay */}
                   <span
-                    className="absolute top-0 left-0 pointer-events-none text-foreground whitespace-pre"
+                    className="absolute top-0 left-0 pointer-events-none whitespace-pre-wrap break-words"
                     aria-hidden="true"
                   >
-                    {input}
-                    <span className="inline-block w-[0.6em] h-[1.2em] bg-terminal-success/80 cursor-blink align-middle -mb-[0.1em]" />
+                    <span className="text-foreground">{input}</span>
+                    <span className="inline-block w-[0.6em] h-[1.2em] bg-terminal-success/80 cursor-blink align-middle -mb-[0.1em] text-foreground" />
+                    {flowGhostSuffix ? (
+                      <span className="text-muted-foreground/80 select-none">{flowGhostSuffix}</span>
+                    ) : ghostSuffix ? (
+                      <span className="text-muted-foreground/80 select-none">{ghostSuffix}</span>
+                    ) : null}
                   </span>
                 </div>
               </div>
@@ -335,15 +459,15 @@ const Terminal = () => {
 
             {/* Rotating hint */}
             {showInput && (
-              <div className="mt-4 h-5">
+              <div className="mt-2 sm:mt-4 h-4 sm:h-5">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={hintIndex}
                     initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 0.5, y: 0 }}
                     exit={{ opacity: 0, y: -5 }}
                     transition={{ duration: 0.3 }}
-                    className="text-xs text-terminal-muted italic"
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-[11px] sm:text-xs text-terminal-muted/80 italic"
                   >
                     {HINTS[hintIndex]}
                   </motion.div>

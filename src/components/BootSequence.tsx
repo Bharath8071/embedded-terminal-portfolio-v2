@@ -25,14 +25,14 @@ const BootSequence = ({ onComplete }: BootSequenceProps) => {
   }, [currentLine, onComplete]);
 
   return (
-    <div className="p-4 text-sm">
+    <div className="p-2 sm:p-4 text-xs sm:text-sm">
       {lines.map((line, i) => (
         <div key={i} className="text-terminal-success terminal-glow">
           {line && '▸ '}{line}
         </div>
       ))}
       {currentLine < BOOT_MESSAGES.length && (
-        <span className="inline-block w-2 h-4 bg-terminal-success cursor-blink" />
+        <span className="inline-block w-1.5 h-3 sm:w-2 sm:h-4 bg-terminal-success cursor-blink" />
       )}
     </div>
   );

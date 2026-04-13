@@ -2,6 +2,7 @@ export interface CommandOutput {
   type: 'text' | 'neofetch' | 'clear' | 'link';
   content: string[];
   url?: string;
+  next?: string; // for chaining commands like 'clear' → 'neofetch' 
 }
 
 const ASCII_LOGO_LETTERS: string[][] = [
@@ -68,6 +69,21 @@ const ASCII_LOGO_LETTERS: string[][] = [
     '██║  ██║',
     '╚═╝  ╚═╝',
   ],
+  //!
+  ['',
+   '',
+   '',
+   '',
+   '',
+   '',
+  ],
+  ['██╗',
+   '██║',
+   '██║',
+   '╚═╝',
+   '██╗',
+   '╚═╝',
+  ],
 ];
 
 export const AVAILABLE_COMMANDS = [
@@ -76,13 +92,21 @@ export const AVAILABLE_COMMANDS = [
   'resume', 'clear', 'neofetch',
 ];
 
+/** Shown as inline ghost after `projects`; maps to `project` + number in executeCommand. */
+export const PROJECT_SUGGEST_COMMANDS = [
+  'project 1',
+  'project 2',
+  'project 3',
+  'project 4',
+] as const;
+
 const NEOFETCH_INFO = [
   { label: '', value: 'bharath@portfolio', isHeader: true },
   { label: '', value: '─────────────────', isHeader: false },
   { label: 'Role', value: 'Embedded Systems Engineer' },
   { label: 'Focus', value: 'Linux Kernel + Embedded Systems' },
   { label: 'Location', value: 'India' },
-  { label: '', value: '' },
+  // { label: '', value: '' },
   { label: 'OS', value: 'Bharath Portfolio OS' },
   { label: 'Kernel', value: 'Embedded v1.0' },
   { label: 'Shell', value: 'portfolio-terminal' },
@@ -103,6 +127,86 @@ export function getNeofetchData() {
   return { asciiLetters: ASCII_LOGO_LETTERS, info: NEOFETCH_INFO };
 }
 
+function getBoxWidth() {
+  if (typeof window === 'undefined') return 60;
+
+  if (window.innerWidth < 400) return 36; // extra small phones
+  if (window.innerWidth < 640) return 42;
+
+  return 65;
+}
+
+function createBox(title: string, lines: string[], width: number) {
+
+  const innerWidth = width - 6; // content area
+  const totalWidth = innerWidth + 6; // full box width
+
+  const contentWidth = width - 6;
+
+  const titleText = `── ${title} `;
+  const remaining = totalWidth - titleText.length - 2;
+
+  const top = `  ╭${titleText}${'─'.repeat(Math.max(0, remaining))}╮`;
+
+  const bottom = `  ╰${'─'.repeat(totalWidth - 2)}╯`;
+
+  function wrapText(text: string): string[] {
+    const words = text.split(' '); 
+    const result: string[] = [];
+    let current = '';
+
+    for (let word of words) {
+
+      if (word.includes('](')) {
+        if (current) {
+          result.push(current);
+          current = '';
+        }
+        result.push(word);
+        continue;
+      }
+    
+      if ((current + (current ? ' ' : '') + word).length <= contentWidth) {
+        current += (current ? ' ' : '') + word;
+      } else {
+        if (current) result.push(current);
+        current = word;
+      }
+    }
+
+    if (current) result.push(current);
+    return result;
+  }
+
+  const formatted = lines.flatMap(line => {
+
+  // ✅ If line contains markdown link → DO NOT WRAP
+  if (line.includes('](')) {
+
+    // 1. Get visible text (for correct padding)
+    const visibleText = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1');
+  
+    // 2. Calculate how many spaces needed
+    const paddingLength = contentWidth - visibleText.length;
+  
+    // 3. Add padding to ORIGINAL string (not visibleText)
+    const paddedLine = line + ' '.repeat(Math.max(0, paddingLength));
+  
+    return [`  │  ${paddedLine}  │`];
+  }
+
+  if (line.trim() === '') {
+    return [`  │${' '.repeat(width - 2)}│`];
+  }
+
+  return wrapText(line).map(chunk => {
+    const padded = chunk.padEnd(contentWidth, ' ');
+    return `  │  ${padded}  │`;
+  });
+});
+
+  return ['', top, ...formatted, bottom, ''];
+}
 export function executeCommand(input: string): CommandOutput {
   const trimmed = input.trim().toLowerCase();
   const parts = trimmed.split(/\s+/);
@@ -157,66 +261,69 @@ export function executeCommand(input: string): CommandOutput {
       return { type: 'text', content: lines };
     }
 
-    case 'about':
+    case 'about': {
+      const width = getBoxWidth();
+      
+      return {
+        type: 'text',
+        content: createBox('About Me', [
+          'Name: Bharath M',
+          'Role: Embedded Systems Developer',
+          '',
+          'I specialize in embedded systems and Linux kernel development,',
+          'with hands-on experience building real-world projects using ESP32,',
+          'device drivers, and hardware integration.',
+          '',
+          'Passionate about low-level systems and performance optimization.',
+          '',
+          'Currently seeking opportunities in embedded firmware and Linux systems.',
+        ], width),
+      };
+    }
+
+    case 'skills': {
+      const width = getBoxWidth();
+    
+      const programming = createBox('Programming', [
+        '• Embedded C',
+        '• C (Pointers, Memory Management)',
+        '• Python (Scripting, Automation)',
+      ], width);
+    
+      const embedded = createBox('Embedded Systems', [
+        '• ESP32 Development',
+        '• I2C, SPI, UART',
+        '• Sensor Integration',
+        '• GPIO, Interrupts, Timers',
+      ], width);
+    
+      const os = createBox('Operating Systems', [
+        '• Linux',
+        '• Kernel Modules',
+        '• Character Device Drivers',
+        '• User Space ↔ Kernel Space',
+      ], width);
+    
+      const tools = createBox('Tools & Technologies', [
+        '• Git & GitHub',
+        '• Arduino IDE',
+        '• Cadence (VLSI)',
+        '• Debugging & Testing',
+      ], width);
+    
       return {
         type: 'text',
         content: [
+          ...programming,
           '',
-          '  ╭── About Me ───────────────────────────────────────────╮',
-          '  │                                                       │',
-          '  │  Name:  Bharath M                                     │',
-          '  │  Role:  Embedded Systems Developer                    │',
-          '  │                                                       │',
-          '  │  I specialize in embedded systems and Linux kernel    │',
-          '  │  development, with hands-on experience building       │',
-          '  │  real-world projects using ESP32, device drivers,     │',
-          '  │  and hardware integration.                            │',
-          '  │                                                       │',
-          '  │  Passionate about low-level systems, performance      │',
-          '  │  optimization, and bridging software with hardware.   │',
-          '  │                                                       │',
-          '  │  Currently seeking opportunities in embedded          │',
-          '  │  firmware and Linux-based systems development.        │',
-          '  │                                                       │',
-          '  ╰───────────────────────────────────────────────────────╯',
+          ...embedded,
           '',
+          ...os,
+          '',
+          ...tools,
         ],
       };
-
-    case 'skills':
-      return {
-        type: 'text',
-        content: [
-          '',
-          '  ┌── Programming ──────────────────────────────────┐',
-          '  │  ● Embedded C                                │',
-          '  │  ● C (Pointers, Memory Management)           │',
-          '  │  ● Python (Scripting, Automation)            │',
-          '  └──────────────────────────────────────────────────┘',
-          '',
-          '  ┌── Embedded Systems ───────────────────────────┐',
-          '  │  ● ESP32 Development                        │',
-          '  │  ● Peripheral Interfaces (I2C, SPI, UART)   │',
-          '  │  ● Sensor Integration & Data Handling       │',
-          '  │  ● GPIO, Interrupts, Timers                 │',
-          '  └─────────────────────────────────────────────────┘',
-          '',
-          '  ┌── Operating Systems ─────────────────────────┐',
-          '  │  ● Linux                                   │',
-          '  │  ● Kernel Modules                          │',
-          '  │  ● Character Device Drivers                │',
-          '  │  ● User Space ↔ Kernel Space Interaction   │',
-          '  └────────────────────────────────────────────────┘',
-          '',
-          '  ┌── Tools & Technologies ──────────────────────┐',
-          '  │  ● Git & GitHub                            │',
-          '  │  ● Arduino IDE                             │',
-          '  │  ● Cadence (VLSI Tools)                    │',
-          '  │  ● Debugging & Testing                     │',
-          '  └────────────────────────────────────────────────┘',
-          '',
-        ],    
-      };
+    }
 
     case 'projects':
       return {
@@ -248,120 +355,85 @@ export function executeCommand(input: string): CommandOutput {
       };
 
     case 'project': {
+      const width = getBoxWidth();
       const num = parseInt(parts[1]);
       const projectDetails: Record<number, string[]> = {
+        
+        1: createBox('Project 1', [
+          '',
+          'Linux Character Device Driver (Circular Queue)',
+          '',
+          'Tech: C, Linux Kernel, Device Drivers',
+          '',
+          'Developed a Linux loadable kernel module implementing a character device driver with a circular buffer for efficient data management.',
+          '',
+          'Enabled communication between user space and kernel space using file operations (read/write/ioctl).',
+          '',
+          'Implemented mutex-based synchronization to handle concurrent access and avoid race conditions.',
+          '',
+          'Implemented blocking I/O using wait queues.',
+          '',
+          'Link: [View Repo](https://github.com/Bharath8071/linux-chardevice-circular-queue)',
+           ], width),
 
-        1: [
+        2: createBox('Project 2', [
           '',
-          '  ╭── Project 1 ─────────────────────────────────────────────────────╮',
-          '  │                                                                  │',
-          '  │  Linux Character Device Driver (Circular Queue)                  │',
-          '  │                                                                  │',
-          '  │  Developed a Linux loadable kernel module implementing           │',
-          '  │  a character device driver with a circular buffer for            │',
-          '  │  efficient data management.                                      │',
-          '  │                                                                  │',
-          '  │  Enabled communication between user space and kernel             │',
-          '  │  space using file operations (read/write/ioctl).                 │',
-          '  │                                                                  │',
-          '  │  Implemented mutex-based synchronization to handle               │',
-          '  │  concurrent access and avoid race conditions.                    │',
-          '  │                                                                  │',
-          '  │  Implemented blocking I/O using wait queues.                     │',
-          '  │                                                                  │',
-          '  │  Tech: C, Linux Kernel, Device Drivers                           │',
-          '  │                                                                  │',
-          '  │  Link: [View Repo](https://github.com/Bharath8071/linux-chardevice-circular-queue)                                                 │',
-          '  ╰──────────────────────────────────────────────────────────────────╯',
+          'Smart MP3 Player',
           '',
-           ],
-
-        2: [
+          'Tech: ESP32, Embedded C, SPI/I2C, SD Card, Bluethoot',
           '',
-          '  ╭── Project 2 ───────────────────────────────────────────────────╮',
-          '  │                                                                │',
-          '  │  Smart MP3 Player                                              │',
-          '  │                                                                │',
-          '  │  Designed firmware using a state-based architecture            │',
-          '  │  to manage user input, playback control, and system flow.      │',
-          '  │                                                                │',
-          '  │  Implemented SD card file handling with structured             │',
-          '  │  navigation for audio data access and management.              │',
-          '  │                                                                │',
-          '  │  Integrated watchdog timer for fault recovery and              │',
-          '  │  system stability during runtime.                              │',
-          '  │                                                                │',
-          '  │  Applied deep sleep and peripheral wake-up mechanisms          │',
-          '  │  to optimize power consumption.                                │',
-          '  │                                                                │',
-          '  │  Developed a button-driven interface for real-time             │',
-          '  │  control and responsive interaction.                           │',
-          '  │                                                                │',
-          '  │  Tech: ESP32, Embedded C, SPI/I2C, SD Card, Bluethoot          │',
-          '  │                                                                │',
-          // '  │  GitHub: github.com/Bharath8071/smart-mp3-player               │',
-          '  ╰────────────────────────────────────────────────────────────────╯',
+          'Designed firmware using a state-based architecture to manage user input, playback control, and system flow.',
           '',
-           ],
-
-        3: [
+          'Implemented SD card file handling with structured navigation for audio data access and management.',
           '',
-          '  ╭── Project 3 ───────────────────────────────────────────────────╮',
-          '  │                                                                │',
-          '  │  Mini Satellite Data Logger                                    │',
-          '  │                                                                │',
-          '  │  Designed a multi-sensor data acquisition system using         │',
-          '  │  ESP32 for continuous environmental monitoring.                │',
-          '  │                                                                │',
-          '  │  Implemented a structured data pipeline for acquisition,       │',
-          '  │  preprocessing, and storage of sensor data.                    │',
-          '  │                                                                │',
-          '  │  Integrated multiple sensors (temperature, humidity,           │',
-          '  │  pressure, IMU) for real-time telemetry capture.               │',
-          '  │                                                                │',
-          '  │  Developed hybrid logging with SD card for offline storage     │',
-          '  │  and cloud transmission for remote monitoring.                 │',
-          '  │                                                                │',
-          '  │  Ensured reliable operation through efficient data             │',
-          '  │  handling and optimized execution flow.                        │',
-          '  │                                                                │',
-          '  │  Tech: ESP32, Sensors, SD Card, IoT                            │',
-          '  │                                                                │',
-          // '  │  GitHub: github.com/Bharath8071/mini-satellite                 │',
-          '  ╰────────────────────────────────────────────────────────────────╯',
+          'Integrated watchdog timer for fault recovery and system stability during runtime.',
           '',
-           ],
-
-           4: [
+          'Applied deep sleep and peripheral wake-up mechanisms to optimize power consumption.',
+          '',
+          'Developed a button-driven interface for real-time control and responsive interaction.',
+          '',
+          'Link: [View Repo](https://github.com/Bharath8071/smart-mp3-player)',
+        ], width),
+        
+        3: createBox('Project 3', [
+          '',
+          'Mini Satellite Data Logger',
+          '',
+          'Tech: ESP32, Sensors, SD Card, IoT',
+          '',
+          'Designed a multi-sensor data acquisition system using ESP32 for continuous environmental monitoring.',
+          '',
+          'Implemented a structured data pipeline for acquisition, preprocessing, and storage of sensor data.',
+          '',
+          'Integrated multiple sensors (temperature, humidity, pressure, IMU) for real-time telemetry capture.',
+          '',
+          'Developed hybrid logging with SD card for offline storage and cloud transmission for remote monitoring.',
+          '',
+          'Ensured reliable operation through efficient data handling and optimized execution flow.',
+          '',
+          'Link: [View Repo](https://github.com/Bharath8071/mini-satellite-data-logger)',
+        ], width),
+        
+        4: createBox('Project 4',  [
             '',
-            '  ╭── Project 4 ───────────────────────────────────────────────────╮',
-            '  │                                                                │',
-            '  │  Ambient Backlight Engine                                      │',
-            '  │                                                                │',
-            '  │  Designed a real-time ambient lighting system using            │',
-            '  │  computer vision and clustering for screen-synced output.      │',
-            '  │                                                                │',
-            '  │  Implemented grid-based frame segmentation and edge-only       │',
-            '  │  processing to reduce computation and improve performance.     │',
-            '  │                                                                │',
-            '  │  Applied K-Means clustering to extract dominant colors         │',
-            '  │  from each region for accurate visual mapping.                 │',
-            '  │                                                                │',
-            '  │  Optimized color processing using RGB ↔ HLS conversion         │',
-            '  │  for better lighting representation on LEDs.                   │',
-            '  │                                                                │',
-            '  │  Designed a buffered update system with queue-based flow       │',
-            '  │  and multithreading for low-latency LED control.               │',
-            '  │                                                                │',
-            '  │  Controlled WS2812 LED strips for synchronized ambient         │',
-            '  │  lighting with minimal delay.                                  │',
-            '  │                                                                │',
-            '  │  Tech: Python, OpenCV, NumPy, K-Means, WS2812, Threads         │',
-            '  │                                                                │',
-            // '  │  GitHub: github.com/Bharath8071/ambient-backlight              │',
-            '  ╰────────────────────────────────────────────────────────────────╯',
+            'Ambient Backlight Engine',
             '',
-          ],
+            'Tech: Python, OpenCV, NumPy, K-Means, WS2812, Threads',
+            '',
+            'Designed a real-time ambient lighting system using computer vision and clustering for screen-synced output.',
+            '',
+            'Implemented grid-based frame segmentation and edge-only processing to reduce computation and improve performance.',
+            '',
+            'Applied K-Means clustering to extract dominant colors from each region for accurate visual mapping.',
+            '',
+            'Optimized color processing using RGB ↔ HLS conversion for better lighting representation on LEDs.',
+            '',
+            'Designed a buffered update system with queue-based flow and multithreading for low-latency LED control.',
+            '',
+            'Controlled WS2812 LED strips for synchronized ambient lighting with minimal delay.',
+            '',
+            'Link: [View Repo](https://github.com/Bharath8071/ambient-backlight)',
+           ], width),
       };
       if (projectDetails[num]) {
         return { type: 'text', content: projectDetails[num] };
@@ -369,90 +441,77 @@ export function executeCommand(input: string): CommandOutput {
       return { type: 'text', content: ['', '  Error: Invalid project number. Type "projects" to see available projects.', ''] };
     }
 
-    case 'experience':
-      return {
-        type: 'text',
-        content: [
-          '',
-          '  ┌── Experience ───────────────────────────────────────────────┐',
-          '  │                                                             │',
-          '  │  ▸ Embedded Systems Intern                                  │',
-          '  │    Radhva Motors (EV Company)                               │',
-          '  │                                                             │',
-          '  │    • Developed C modules for sensor interfacing             │',
-          '  │      and real-time data acquisition in EV systems           │',
-          '  │    • Implemented CAN communication for reliable             │',
-          '  │      interaction between subsystems                         │',
-          '  │    • Performed debugging and validation on real             │',
-          '  │      hardware environments                                  │',
-          '  │    • Understood system-level integration of motors,         │',
-          '  │      battery management, and controllers                    │',
-          '  │                                                             │',
-          '  │    Link: [Read Article](https://www.linkedin.com/posts/bharath-mani_internshipexperience-evtechnology-electricvehicles-ugcPost-7349281700255842305-gPP3?utm_source=share&utm_medium=member_desktop&rcm=ACoAAD9f2ToBQWwgCvbT7NIG2V_APJWEcMRfa7g)                                       │',
-          '  │                                                             │',
-          '  │  ▸ VLSI Design Intern                                       │',
-          '  │    SNS College of Technology + IIT Palakkad (C2S)           │',
-          '  │                                                             │',
-          '  │    • Explored complete VLSI design flow from RTL            │',
-          '  │      to physical layout (GDSII)                             │',
-          '  │    • Designed RTL modules using Verilog and worked          │',
-          '  │      with Cadence tools for circuit design                  │',
-          '  │    • Connected academic learning with real-world            │',
-          '  │      semiconductor workflows                                │',
-          '  │                                                             │',
-          '  │    Link: [Read Article](https://www.linkedin.com/pulse/bridging-academia-industry-my-journey-through-vlsi-design-bharath-m-cjldc)                                       │',
-          '  │                                                             │',
-          '  └─────────────────────────────────────────────────────────────┘',
-          '',
-        ],
-    };
+    case 'experience': {
+      const width = getBoxWidth();
 
-    case 'certs':
+      return {
+
+        type: 'text',
+        content: createBox('Experience', [ 
+
+          '▸ Embedded Systems Intern',
+          '  Radhva Motors (EV Company)',
+          '',
+          '  • Developed C modules for sensor interfacing',
+          '    and real-time data acquisition in EV systems',
+          '  • Implemented CAN communication for reliable',
+          '    interaction between subsystems',
+          '  • Performed debugging and validation on real',   
+          '    hardware environments',
+          '  • Understood system-level integration of motors,',
+          '    battery management, and controllers',
+          '  Link: [Read Article](https://www.linkedin.com/posts/bharath-mani_internshipexperience-evtechnology-electricvehicles-ugcPost-7349281700255842305-gPP3?utm_source=share&utm_medium=member_desktop&rcm=ACoAAD9f2ToBQWwgCvbT7NIG2V_APJWEcMRfa7g)',
+          
+          '▸ VLSI Design Intern',
+          '  SNS College of Technology + IIT Palakkad (C2S)',
+          '',
+          '  • Explored complete VLSI design flow from RTL',
+          '    to physical layout (GDSII)',
+          '  • Designed RTL modules using Verilog and worked',
+          '    with Cadence tools for circuit design',
+          '  • Connected academic learning with real-world',
+          '    semiconductor workflows',
+          '',
+          '  Link: [Read Article](https://www.linkedin.com/pulse/bridging-academia-industry-my-journey-through-vlsi-design-bharath-m-cjldc)',
+        ], width),
+      };
+    }
+
+    case 'certs': {
+      const width = getBoxWidth();
+      
        return {
          type: 'text',
-         content: [
-           '',
-           '  ┌── Certifications ───────────────────────────────────────────┐',
-           '  │                                                             │',
-           '  │  ▸ AWS Academy – Generative AI Foundation                   │',
-           '  │    • Fundamentals of AI and cloud-based model deployment    │',
-           '  │                                                             │',
-           '  │  ▸ Edge AI – Edge Impulse Platform                          │',
-           '  │    • TinyML concepts and on-device ML integration           │',
-           '  │                                                             │',
-           '  │  ▸ LinkedIn Learning                                        │',
-           '  │    • Generative AI                                          │',
-           '  │    • MySQL for Data Management                              │',
-           '  │                                                             │',
-           '  │  ▸ TCS iON                                                  │',
-           '  │    • Soft Skills Training                                   │',
-           '  │                                                             │',
-           '  │  ▸ PrepInsta                                                │',
-           '  │    • C Programming                                          │',
-           '  │    • Python Programming                                     │',
-           '  │                                                             │',
-           '  └─────────────────────────────────────────────────────────────┘',
-           '',
-         ],
-       };
+         content: createBox('Certifications', [ 
+           '  ▸ AWS Academy – Generative AI Foundation',
+           '    • Fundamentals of AI and cloud-based model deployment',
+           '  ▸ Edge AI – Edge Impulse Platform',
+           '    • TinyML concepts and on-device ML integration',
+           '  ▸ LinkedIn Learning',
+           '    • Generative AI',
+           '    • MySQL for Data Management',
+           '  ▸ TCS iON',
+           '    • Soft Skills Training',
+           '  ▸ PrepInsta',
+           '    • C Programming',
+           '    • Python Programming',
+         ], width),
+        };
+    }
 
-    case 'contact':
+    case 'contact': {
+      const width = getBoxWidth();
       return {
         type: 'text',
-        content: [
-          '',
-          '  ╭── Contact ───────────────────────────────────────╮',
-          '  │                                                  │',
-          '  │  Email:    [bharathmani8071@gmail.com](mailto:bharathmani8071@gmail.com)             │',
-          '  │  LinkedIn: linkedin.com/in/bharath-mani          │',
-          '  │  GitHub:   github.com/Bharath8071                │',
-          '  │  Contact:  +91 9150198071                        │',
-          '  │  Location: Coimbatore, India                     │',
-          '  │                                                  │',
-          '  ╰──────────────────────────────────────────────────╯',
-          '',
-        ],
+        content: createBox('Contact', [
+          'Email:    [bharathmani8071@gmail.com](mailto:bharathmani8071@gmail.com)',
+          'LinkedIn: linkedin.com/in/bharath-mani',
+          'GitHub:   github.com/Bharath8071',
+          'Contact:  +91 9150198071',
+          'Location: Coimbatore, India',
+          ],width),
       };
+    }
 
     case 'github':
       window.open('https://github.com/Bharath8071', '_blank');
@@ -485,7 +544,7 @@ export function executeCommand(input: string): CommandOutput {
     return { type: 'text', content: ['', '  ⚠ Resume download will be available soon.', ''] };
 
     case 'clear':
-      return { type: 'clear', content: [] };
+      return { type: 'clear', content: [], next: 'neofetch' };
 
     case 'neofetch':
       return { type: 'neofetch', content: [] };
