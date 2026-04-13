@@ -107,7 +107,7 @@ const NEOFETCH_INFO = [
   { label: 'Focus', value: 'Linux Kernel + Embedded Systems' },
   { label: 'Location', value: 'India' },
   // { label: '', value: '' },
-  { label: 'OS', value: 'Bharath Portfolio OS' },
+  { label: '', value: 'Bharath Portfolio OS' },
   { label: 'Kernel', value: 'Embedded v1.0' },
   { label: 'Shell', value: 'portfolio-terminal' },
   { label: 'Projects', value: '4' },
