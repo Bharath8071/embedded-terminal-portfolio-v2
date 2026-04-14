@@ -92,6 +92,7 @@ const Terminal = () => {
   const [suggestIndex, setSuggestIndex] = useState(0);
 
   // Flow suggestion state
+  const [lastCmd, setLastCmd] = useState('');
   const [lastExecutedCommand, setLastExecutedCommand] = useState<string>('');
   const [currentFlowIndex, setCurrentFlowIndex] = useState(0);
   const [isFlowActive, setIsFlowActive] = useState(true);
@@ -159,11 +160,19 @@ const Terminal = () => {
   }, []);
 
   // Auto-scroll
+  // useEffect(() => {
+  //   if (scrollRef.current) {
+  //     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  //   }
+  // }, [entries, phase, showInput]);
+
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [entries, phase, showInput]);
+  if (!scrollRef.current) return;
+
+  if (lastCmd === 'all-info') return; // 🚫 disable scroll
+
+  scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [entries, phase, showInput, lastCmd]);
 
   // Focus input
   const focusInput = useCallback(() => {
@@ -188,6 +197,7 @@ const Terminal = () => {
   //   }
   const runCommand = useCallback((cmd: string) => {
     const result = executeCommand(cmd);
+    setLastCmd(cmd.trim().toLowerCase());
   
     if (result.type === 'clear') {
         setEntries([]);
@@ -245,12 +255,18 @@ const Terminal = () => {
       setIsFlowActive(true);
       setCurrentFlowIndex(1); // Set to 1 since 'about' was just executed
     }
+
+    // Note: you could also consider allowing certain "non-breaking" commands that don't affect flow progression, depending on your desired UX. For simplicity, any unexpected command breaks the flow in this implementation.
+    // setShowInput(false);
   
-    setShowInput(false);
-  
-    setTimeout(() => {
-      setShowInput(true);
-    }, 100);
+    if (cmd.trim().toLowerCase() !== 'all-info') {
+      setShowInput(false);
+    
+      setTimeout(() => {
+        setShowInput(true);
+      }, 100);
+    }
+    
   }, [entryCounter, isFlowActive, currentFlowIndex]);
 
   const getSelectedSuggestion = useCallback(() => {

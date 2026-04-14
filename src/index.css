@@ -12,6 +12,15 @@
   -webkit-text-stroke: 0.3px currentColor;
 }
 
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: blink 1s infinite;
+}
+
 @layer base {
   :root {
     --background: 215 28% 7%;

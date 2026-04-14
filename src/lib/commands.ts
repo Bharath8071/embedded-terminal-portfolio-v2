@@ -241,7 +241,7 @@ export function executeCommand(input: string): CommandOutput {
         ],
       };
 
-    case 'all': {
+    case 'all-info': {
       const sections = ['about', 'projects','project 1','project 2','project 3','project 4', 'skills', 'experience', 'certs', 'contact'] as const;
       const headers: Record<string, string> = {
         about: 'ABOUT', projects: 'PROJECTS', skills: 'SKILLS',
@@ -251,11 +251,13 @@ export function executeCommand(input: string): CommandOutput {
       const lines: string[] = [''];
       for (const s of sections) {
 
-        // lines.push(`  ══════════════════════════════════════════`);
-        // lines.push(`  ## ${headers[s]}`);
-        // lines.push(`  `);
-        // lines.push(`  ————————————————————————————————————————————————————————————————————————————————————————————`);
         lines.push(`  `);
+        lines.push(`  ##══════════════════════════════════════════##`);
+        lines.push(`  ## ${headers[s]}`);
+        lines.push(`  ##══════════════════════════════════════════##`);
+        lines.push(`  `);
+        // lines.push(`  ————————————————————————————————————————————————————————————————————————————————————————————`);
+        // lines.push(`  `);
         // lines.push(`  ══════════════════════════════════════════`);
         // lines.push(`  ══════════════════════════════════════════`);
         const result = executeCommand(s);
@@ -454,19 +456,19 @@ export function executeCommand(input: string): CommandOutput {
         type: 'text',
         content: createBox('**Experience**', [
 
-          '▸ Freelance Embedded Developer',
-            '\u00A0\u00A0Final Year Students & Early-Stage Startups',
-            '\u00A0\u00A0Duration: 2025 – Present',
-            '',
-            '\u00A0• Designed and delivered embedded firmware solutions',
-            '\u00A0including sensor-based systems and audio playback devices',
-            '\u00A0• Collaborated directly with clients to translate hardware',
-            '\u00A0 requirements into reliable, real-time firmware implementations',
-            '\u00A0• Developed ESP32-based IoT and data logging systems with',
-            '\u00A0  production-ready code.',
-            '\u00A0• Performed debugging, testing, and system validation across',
-            '\u00A0  hardware and firmware layers to ensure stability',
-            '',      
+          // '▸ Freelance Embedded Developer',
+          //   '\u00A0\u00A0Final Year Students & Early-Stage Startups',
+          //   '\u00A0\u00A0Duration: 2025 – Present',
+          //   '',
+          //   '\u00A0• Designed and delivered embedded firmware solutions',
+          //   '\u00A0including sensor-based systems and audio playback devices',
+          //   '\u00A0• Collaborated directly with clients to translate hardware',
+          //   '\u00A0 requirements into reliable, real-time firmware implementations',
+          //   '\u00A0• Developed ESP32-based IoT and data logging systems with',
+          //   '\u00A0  production-ready code.',
+          //   '\u00A0• Performed debugging, testing, and system validation across',
+          //   '\u00A0  hardware and firmware layers to ensure stability',
+          //   '',      
           '▸ Embedded Systems Intern',
             '\u00A0\u00A0Radhva Motors (EV Company)',
             '\u00A0\u00A0Duration: July 2024',
