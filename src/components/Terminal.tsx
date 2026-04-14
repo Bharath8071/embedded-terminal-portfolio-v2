@@ -19,18 +19,64 @@ const URL_PATTERN = /(https?:\/\/[^\s]+|(?:github|linkedin)\.com\/[^\s]+)/g;
 
 const toHref = (text: string) => (text.startsWith('http') ? text : `https://${text}`);
 
-const GHOST_ROTATE_MS = 3000;
+const GHOST_ROTATE_MS = 1000;
 
 const HINTS = [
-  'Tip: click a command below or type it manually',
   'Tip: press TAB to autocomplete',
+  // 'Tip: press TAB to autocomplete',
+  // 'Tip: click a command below or type it manually',
 ];
 
 // Predefined ordered flow of commands for guided experience
 const FLOW_COMMANDS = [
-  'about', 'skills', 'projects', 'project 1', 'project 2', 'project 3', 'project 4', 
+  'about', 'projects', 'project 1', 'project 2', 'project 3', 'project 4', 'skills',
   'experience', 'certs', 'contact', 'resume'
 ];
+
+const renderLine = (line: string, i: number) => {
+  const regex = /\*\*(.+?)\*\*|\#\#(.+?)\#\#|\+\+(.+?)\+\+/g;
+  const parts: ReactNode[] = [];
+  let last = 0;
+  let match;
+
+  while ((match = regex.exec(line)) !== null) {
+    if (match.index > last) {
+      parts.push(<span key={`${i}-t-${last}`}>{line.slice(last, match.index)}</span>);
+    }
+
+    let text: string;
+    let className: string;
+
+    if (match[1]) {
+      text = match[1];
+      className = "text-[16px] text-terminal-accent-200";  // ** = blue
+    } else if (match[2]) {
+      text = match[2];
+      className = "text-gray-500";                      // ## = gray
+    } else {
+      text = match[3];
+      className = "text-terminal-success";              // ++ = green
+    }
+
+    parts.push(
+      <span key={`${i}-b-${match.index}`} className={className}>
+        {text}
+      </span>
+    );
+
+    last = match.index + match[0].length;
+  }
+
+  if (last < line.length) {
+    parts.push(<span key={`${i}-tail`}>{line.slice(last)}</span>);
+  }
+
+  return (
+    <div key={i} className="text-foreground whitespace-pre-wrap break-words">
+      {parts.length > 0 ? parts : line}
+    </div>
+  );
+};
 
 const Terminal = () => {
   const [phase, setPhase] = useState<'boot' | 'ready'>('boot');
@@ -96,13 +142,13 @@ const Terminal = () => {
   }, [baseInput]);
 
   // Auto-rotate ghost through prefix matches every 2s (loops)
-  useEffect(() => {
-    if (matches.length === 0) return;
-    const id = window.setInterval(() => {
-      setSuggestIndex((prev) => (prev + 1) % matches.length);
-    }, GHOST_ROTATE_MS);
-    return () => window.clearInterval(id);
-  }, [matches]);
+  // useEffect(() => {
+  //   if (matches.length === 0) return;
+  //   const id = window.setInterval(() => {
+  //     setSuggestIndex((prev) => (prev + 1) % matches.length);
+  //   }, GHOST_ROTATE_MS);
+  //   return () => window.clearInterval(id);
+  // }, [matches]);
 
   // Rotate hints
   useEffect(() => {
@@ -301,7 +347,7 @@ const Terminal = () => {
               <div key={entry.id} className="mb-1.5 sm:mb-2">
                 {entry.command !== undefined && (
                   <div>
-                    <span className="text-terminal-success font-semibold">bharath@portfolio</span>
+                    <span className="text-terminal-success font-semibold">bharath@embedded-dev</span>
                     <span className="text-terminal-muted">:</span>
                     <span className="text-terminal-accent font-semibold">~</span>
                     <span className="text-foreground">$ </span>
@@ -324,7 +370,7 @@ const Terminal = () => {
 
                       if (start > last) {
                         parts.push(
-                          <span key={`l${i}-md-t-${idx}`}>
+                          <span key={`l${i}-md-t-${idx}`}className="whitespace-pre-wrap">
                             {line.slice(last, start)}
                           </span>
                         );
@@ -336,7 +382,7 @@ const Terminal = () => {
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-terminal-accent underline hover:text-terminal-success cursor-pointer"
+                          className="text-terminal-accent underline hover:text-terminal-success cursor-pointer whitespace-pre-wrap"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {label}
@@ -363,8 +409,8 @@ const Terminal = () => {
 
                   // 2) Fallback: auto-detect raw URLs (existing behavior)
                   const matches = [...line.matchAll(URL_PATTERN)];
-                  if (matches.length === 0) {
-                    return <div key={i} className="text-foreground whitespace-pre-wrap break-words">{line}</div>;
+                  if (matches.length === 0 ) {
+                    return renderLine(line, i);
                   }
 
                   const parts: ReactNode[] = [];
@@ -419,7 +465,7 @@ const Terminal = () => {
             {showInput && (
               <div className="flex items-center text-sm sm:text-base">
 
-                <span className="text-terminal-success font-semibold">bharath@kernel-dev</span>
+                <span className="text-terminal-success font-semibold">bharath@embedded-dev</span>
                 <span className="text-terminal-muted">:</span>
                 <span className="text-terminal-accent font-semibold">~</span>
                 <span className="text-foreground">$ </span>
@@ -459,7 +505,7 @@ const Terminal = () => {
 
             {/* Rotating hint */}
             {showInput && (
-              <div className="mt-2 sm:mt-4 h-4 sm:h-5">
+              <div className="mt-2 sm:mt-1 h-3 sm:h-3">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={hintIndex}
@@ -467,7 +513,7 @@ const Terminal = () => {
                     exit={{ opacity: 0, y: -5 }}
                     transition={{ duration: 0.3 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-[11px] sm:text-xs text-terminal-muted/80 italic"
+                    className="text-[11px] sm:text-[13px] text-terminal-muted/100 italic"
                   >
                     {HINTS[hintIndex]}
                   </motion.div>

@@ -2,7 +2,7 @@ interface CommandPanelProps {
   onCommand: (command: string) => void;
 }
 
-const COMMANDS_ROW1 = ['all', 'about', 'skills', 'projects', 'experience', 'certs'];
+const COMMANDS_ROW1 = ['all-info', 'about', 'projects', 'skills', 'experience', 'certs'];
 const COMMANDS_ROW2 = ['contact', 'github', 'linkedin', 'resume', 'neofetch', 'help'];
 
 const CommandPanel = ({ onCommand }: CommandPanelProps) => {
