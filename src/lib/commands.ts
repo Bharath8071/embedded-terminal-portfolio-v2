@@ -87,7 +87,7 @@ const ASCII_LOGO_LETTERS: string[][] = [
 ];
 
 export const AVAILABLE_COMMANDS = [
-  'all', 'help', 'about', 'skills', 'projects', 'project',
+  'all-info', 'help', 'about', 'skills', 'projects', 'project',
   'experience', 'clear', 'certs', 'contact', 'github', 'linkedin',
   'resume', 'neofetch',
 ];
@@ -106,7 +106,7 @@ const NEOFETCH_INFO = [
 
   { label: 'Role', value: 'Embedded Systems Developer' },
   { label: 'Focus', value: 'Embedded Systems + Linux Kernel' },
-  { label: 'Location', value: 'Coimbatore, India' },
+  { label: 'Location', value: 'Coimbatore, Tamil Nadu' },
 
   { label: 'Status', value: 'Open to Work 🟢' },
 
@@ -139,74 +139,69 @@ function getBoxWidth() {
 
 function createBox(title: string, lines: string[], width: number) {
 
-  const innerWidth = width - 6; // content area
-  const totalWidth = innerWidth + 6; // full box width
-
+  const innerWidth = width - 6;
+  const totalWidth = innerWidth + 6;
   const contentWidth = width - 6;
 
-  const titleText = `── ${title} `;
+  const cleanTitle = title.replace(/\*\*(.+?)\*\*/g, '$1').replace(/##(.+?)##/g, '$1').replace(/\+\+(.+?)\+\+/g, '$1');
+  const titleText = `── ${cleanTitle} `;
   const remaining = totalWidth - titleText.length - 2;
 
-  const top = `  ╭${titleText}${'─'.repeat(Math.max(0, remaining+4))}╮`;
-
+  const top = `  ╭${titleText}${'─'.repeat(Math.max(0, remaining ))}╮`;
   const bottom = `  ╰${'─'.repeat(totalWidth - 2)}╯`;
 
+  const visibleLen = (s: string) => s
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/##(.+?)##/g, '$1')
+    .replace(/\+\+(.+?)\+\+/g, '$1')
+    .length;
+
   function wrapText(text: string): string[] {
-    const words = text.split(' '); 
+    const words = text.split(' ');
     const result: string[] = [];
     let current = '';
 
-    for (let word of words) {
-
+    for (const word of words) {
       if (word.includes('](')) {
-        if (current) {
-          result.push(current);
-          current = '';
-        }
+        if (current) { result.push(current); current = ''; }
         result.push(word);
         continue;
       }
-    
-      if ((current + (current ? ' ' : '') + word).length <= contentWidth) {
-        current += (current ? ' ' : '') + word;
+      const candidate = current ? current + ' ' + word : word;
+      if (visibleLen(candidate) <= contentWidth) {
+        current = candidate;
       } else {
         if (current) result.push(current);
         current = word;
       }
     }
-
     if (current) result.push(current);
     return result;
   }
 
   const formatted = lines.flatMap(line => {
 
-  // ✅ If line contains markdown link → DO NOT WRAP
-  if (line.includes('](')) {
+    if (line.includes('](')) {
+      const visibleText = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1');
+      const paddingLength = contentWidth - visibleText.length;
+      const paddedLine = line + ' '.repeat(Math.max(0, paddingLength));
+      return [`  │  ${paddedLine}  │`];
+    }
 
-    // 1. Get visible text (for correct padding)
-    const visibleText = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1');
-  
-    // 2. Calculate how many spaces needed
-    const paddingLength = contentWidth - visibleText.length;
-  
-    // 3. Add padding to ORIGINAL string (not visibleText)
-    const paddedLine = line + ' '.repeat(Math.max(0, paddingLength));
-  
-    return [`  │  ${paddedLine}  │`];
-  }
+    if (line.trim() === '') {
+      return [`  │${' '.repeat(width - 2)}│`];
+    }
 
-  if (line.trim() === '') {
-    return [`  │${' '.repeat(width - 2)}│`];
-  }
+    const leadingSpaces = line.match(/^(\s+)/)?.[1] ?? '';
 
-  return wrapText(line).map(chunk => {
-    const visibleLength = chunk.replace(/##/g, '').length;
-    const padding = contentWidth - visibleLength;
-    const padded = chunk + ' '.repeat(Math.max(0, padding));
-    return `  │  ${padded}  │`;
+    return wrapText(line.trimStart()).map((chunk, index) => {
+      const prefix = index === 0 ? leadingSpaces : ' '.repeat(leadingSpaces.length);
+      const full = prefix + chunk;
+      const padding = contentWidth - visibleLen(full);
+      const padded = full + ' '.repeat(Math.max(0, padding));
+      return `  │  ${padded}  │`;
+    });
   });
-});
 
   return ['', top, ...formatted, bottom, ''];
 }
@@ -223,11 +218,11 @@ export function executeCommand(input: string): CommandOutput {
           '┌──────────────────────────────────────────────┐',
           '│  Available Commands                          │',
           '├──────────────────────────────────────────────┤',
-          '│  all        → Show everything                │',
+          '│  all-info   → Show everything                │',
           '│  about      → Who am I                       │',
           '│  projects   → List all projects              │',
-          '│  skills     → Technical skills               │',
           '│  project <n>→ Project details                │',
+          '│  skills     → Technical skills               │',
           '│  experience → Work experience                │',
           '│  certs      → Certifications                 │',
           '│  contact    → Get in touch                   │',
@@ -242,7 +237,7 @@ export function executeCommand(input: string): CommandOutput {
       };
 
     case 'all-info': {
-      const sections = ['about', 'projects','project 1','project 2','project 3','project 4', 'skills', 'experience', 'certs', 'contact'] as const;
+      const sections = ['about', 'projects','project 1','project 2','project 3','project 4', 'skills', 'experience', 'contact'] as const;
       const headers: Record<string, string> = {
         about: 'ABOUT', projects: 'PROJECTS', skills: 'SKILLS',
         'project 1': 'PROJECT 1', 'project 2': 'PROJECT 2', 'project 3': 'PROJECT 3' ,'project 4': 'PROJECT 4',
@@ -272,17 +267,17 @@ export function executeCommand(input: string): CommandOutput {
       return {
         type: 'text',
           content: createBox('**About Me**', [
-            'Name: Bharath M',
-            'Role: Embedded Systems Developer',
+            '++Name++: **Bharath M**',
+            '++Role++: **Embedded Systems Developer**',
             '',
             'I specialize in embedded programming and Linux kernel',
             'development with hands-on experience building real-world ',
-            'projects using ESP32, STM32, device drivers, and',
+            'projects using ++ESP32, STM32, device drivers++, and',
             'hardware integration.',
             '',
-            'I design clean, memory-efficient firmware for performance',
+            'I design clean, ++memory-efficient++ firmware for performance',
             'critical systems on real hardware, with a strong focus ',
-            'on power optimization.',
+            'on ++power optimization++.',
             '',
             'Currently seeking opportunities in embedded firmware and',
             'Linux-based systems development in core product companies.',
@@ -294,30 +289,29 @@ export function executeCommand(input: string): CommandOutput {
       const width = getBoxWidth();
     
       const programming = createBox('**Programming**', [
-        '• Embedded C',
-        '• C (Pointers, Memory Management)',
-        '• Python (Scripting, Automation)',
+        '##• Embedded C##',
+        '##• C (Pointers, Memory Management)##',
+        '##• Python (Scripting, Automation)##',
       ], width);
     
       const embedded = createBox('**Embedded Systems**', [
-        '• ESP32, STM32 Development',
-        '• CAN, I2C, SPI, UART',
-        '• Sensor Integration',
-        '• GPIO, Interrupts, Timers',
+        '##• ESP32, STM32 Development##',
+        '##• CAN, I2C, SPI, UART##',
+        '##• Sensor Integration##',
+        '##• GPIO, Interrupts, Timers##',
       ], width);
     
       const os = createBox('**Operating Systems**', [
-        '• Linux',
-        '• Kernel Modules',
-        '• Character Device Drivers',
-        '• User Space ↔ Kernel Space',
+        '##• Linux##',
+        '##• Kernel Modules##',
+        '##• Character Device Drivers##',
       ], width);
     
       const tools = createBox('**Tools & Technologies**', [
-        '• Git & GitHub',
-        '• ESP IDF, STM32Cube IDE',
-        '• VS Code, Cursor',
-        '• Debugging & Testing',
+        '##• Git & GitHub##',
+        '##• ESP IDF, STM32Cube IDE##',
+        '##• VS Code, Cursor##',
+        '##• Debugging & Testing##',
       ], width);
     
       return {
@@ -371,16 +365,16 @@ export function executeCommand(input: string): CommandOutput {
         1: createBox('**Project 1**', [
           // '',
           // '',
-          'Linux Character Device Driver (Circular Queue)',
-          '##Tech: C, Linux Kernel, Device Drivers##',
+          '**Linux Character Device Driver (Circular Queue)**',
+          '**Tech:** ##C, Linux Kernel, Device Drivers##',
           '',
-          'Developed a Linux loadable kernel module implementing a character device driver with a circular buffer for efficient data management.',
+          'Developed a Linux loadable kernel module implementing a character device driver with a ++circular buffer++ for efficient data management.',
           '',
-          'Enabled communication between user space and kernel space using file operations (read/write/ioctl).',
+          'Enabled communication between user space and kernel space using ++file operations (read/write/ioctl)++.',
           '',
-          'Implemented mutex-based synchronization to handle concurrent access and avoid race conditions.',
+          'Implemented mutex-based ++synchronization++ to handle concurrent access and avoid ++race conditions++.',
           '',
-          'Implemented blocking I/O using wait queues.',
+          'Implemented ++blocking I/O++ using wait queues.',
           '',
           'Link: [View Repo](https://github.com/Bharath8071/linux-chardevice-circular-queue)',
            ], width),
@@ -388,16 +382,16 @@ export function executeCommand(input: string): CommandOutput {
         2: createBox('**Project 2**', [
           // '',
           // '',
-          'Smart MP3 Player',
-          '##Tech: ESP32, Embedded C, SPI/I2C, SD Card, Bluetooth##',
+          '**Smart MP3 Player**',
+          '**Tech:** ##ESP32, Embedded C, SPI/I2C, SD Card, Bluetooth##',
           '',
-          'Designed firmware using a state-based architecture to manage user input, playback control, and system flow.',
+          'Designed firmware using a ++state-based architecture++ to manage user input, playback control, and system flow.',
           '',
           'Implemented SD card file handling with structured navigation for audio data access and management.',
           '',
-          'Integrated watchdog timer for fault recovery and system stability during runtime.',
+          'Integrated ++watchdog timer for fault recovery++ and system stability during runtime.',
           '',
-          'Applied deep sleep and peripheral wake-up mechanisms to optimize power consumption.',
+          'Applied ++deep sleep++ and ++peripheral wake-up mechanisms++ to optimize power consumption.',
           '',
           'Developed a button-driven interface for real-time control and responsive interaction.',
           '',
@@ -406,15 +400,15 @@ export function executeCommand(input: string): CommandOutput {
         
         3: createBox('**Project 3**', [
           // '',
-          'Mini Satellite Data Logger',
-          '##Tech: ESP32, LM35, DHT22, BMP280, SD Card##',
+          '**Mini Satellite Data Logger**',
+          '**Tech:** ##ESP32, LM35, DHT22, BMP280, SD Card##',
           '##\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0SIM868 (GPS + GSM), ThinkSpeak API##',
           '',
-          'Designed a multi-sensor data acquisition system using ESP32 for continuous environmental monitoring.',
+          'Designed a ++multi-sensor data acquisition system using ESP32++ for continuous environmental monitoring.',
           '',
           'Implemented a structured data pipeline for acquisition, preprocessing, and storage of sensor data.',
           '',
-          'Integrated multiple sensors (temperature, humidity, pressure, IMU) for real-time telemetry capture.',
+          'Integrated multiple sensors ++(temperature,++ ++humidity,++ ++pressure,++ ++IMU)++ for real-time telemetry capture.',
           '',
           'Developed hybrid logging with SD card for offline storage and cloud transmission for remote monitoring.',
           '',
@@ -425,17 +419,17 @@ export function executeCommand(input: string): CommandOutput {
             // '',
             // '',
             'Ambient Backlight Engine',
-            '##Tech: Python, OpenCV, NumPy, K-Means, WS2812, Threads##',
+            '**Tech:** ##Python, OpenCV, NumPy, K-Means, WS2812, Threads##',
             '',
-            'Designed a real-time ambient lighting system using computer vision and clustering for screen-synced output.',
+            'Designed a real-time ambient lighting system using ++computer vision++ and ++clustering for screen-synced++ output.',
             '',
-            'Implemented grid-based frame segmentation and edge-only processing to reduce computation and improve performance.',
+            'Implemented ++grid-based frame segmentation++ and ++edge-only processing++ to reduce computation and improve performance.',
             '',
-            'Applied K-Means clustering to extract dominant colors from each region for accurate visual mapping.',
+            'Applied ++K-Means clustering++ to extract dominant colors from each region for accurate visual mapping.',
             '',
-            'Optimized color processing using RGB ↔ HLS conversion for better lighting representation on LEDs.',
+            'Optimized color processing using ++RGB ↔ HLS++ conversion for better lighting representation on LEDs.',
             '',
-            'Designed a buffered update system with queue-based flow and multithreading for low-latency LED control.',
+            'Designed a buffered update system with ++queue-based flow++ and ++multithreading for low-latency++ LED control.',
             '',
             'Controlled WS2812 LED strips for synchronized ambient lighting with minimal delay.',
             '',
@@ -468,10 +462,10 @@ export function executeCommand(input: string): CommandOutput {
           //   '\u00A0  production-ready code.',
           //   '\u00A0• Performed debugging, testing, and system validation across',
           //   '\u00A0  hardware and firmware layers to ensure stability',
-          //   '',      
-          '▸ Embedded Systems Intern',
-            '\u00A0\u00A0Radhva Motors (EV Company)',
-            '\u00A0\u00A0Duration: July 2024',
+            '',      
+          '▸ **Embedded Systems Intern**',
+            '\u00A0\u00A0##Radhva Motors (EV Company)##',
+            '\u00A0\u00A0##Duration: July 2024##',
             '',
             '\u00A0• Developed C modules for sensor interfacing',
             '\u00A0  and real-time data acquisition in EV systems',
@@ -484,9 +478,9 @@ export function executeCommand(input: string): CommandOutput {
             '',
             'Link: [Read Article](https://www.linkedin.com/posts/bharath-mani_internshipexperience-evtechnology-electricvehicles-ugcPost-7349281700255842305-gPP3?utm_source=share&utm_medium=member_desktop&rcm=ACoAAD9f2ToBQWwgCvbT7NIG2V_APJWEcMRfa7g)',
             '',
-          '▸ VLSI Design Intern',
-            '\u00A0\u00A0SNS College of Technology × IIT Palakkad (C2S)',
-            '\u00A0\u00A0Duration: June 2025',
+          '▸ **VLSI Design Intern**',
+            '\u00A0\u00A0##SNS College of Technology × IIT Palakkad (C2S)##',
+            '\u00A0\u00A0##Duration: June 2025##',
             '',
             '\u00A0• Explored complete VLSI design flow from RTL',
             '\u00A0  to physical layout (GDSII)',
@@ -507,17 +501,17 @@ export function executeCommand(input: string): CommandOutput {
        return {
          type: 'text',
          content: createBox('**Certifications**', [ 
+           '  ▸ PrepInsta',
+           '\u00A0\u00A0\u00A0##• C Programming, Python Programming##',
+           '',
+           '  ▸ Edge AI – Edge Impulse',
+           '\u00A0\u00A0\u00A0##• TinyML, on-device ML inference, edge deployment##',
+           '',
           '  ▸ AWS Academy – Generative AI Foundation',
           '\u00A0\u00A0\u00A0##• AI fundamentals, cloud-based model deployment##',
           '',
-          '  ▸ Edge AI – Edge Impulse',
-          '\u00A0\u00A0\u00A0##• TinyML, on-device ML inference, edge deployment##',
-          '',
           '  ▸ LinkedIn Learning',
           '\u00A0\u00A0\u00A0##• Generative AI, MySQL (Data Management)##',
-          '',
-          '  ▸ PrepInsta',
-          '\u00A0\u00A0\u00A0##• C Programming, Python Programming##',
         ], width),
         };
     }
@@ -531,7 +525,7 @@ export function executeCommand(input: string): CommandOutput {
           'LinkedIn: linkedin.com/in/bharath-mani',
           'GitHub:   github.com/Bharath8071',
           'Contact:  +91 9150198071',
-          'Location: Coimbatore, India',
+          'Location: Coimbatore, Tamil Nadu',
           ],width),
       };
     }

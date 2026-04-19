@@ -22,15 +22,15 @@ const toHref = (text: string) => (text.startsWith('http') ? text : `https://${te
 const GHOST_ROTATE_MS = 1000;
 
 const HINTS = [
-  'Tip: press TAB to autocomplete',
   // 'Tip: press TAB to autocomplete',
+  'TAB → autocomplete | ENTER → execute',
   // 'Tip: click a command below or type it manually',
 ];
 
 // Predefined ordered flow of commands for guided experience
 const FLOW_COMMANDS = [
   'about', 'projects', 'project 1', 'project 2', 'project 3', 'project 4', 'skills',
-  'experience', 'certs', 'contact', 'resume'
+  'experience', 'contact', 'resume'
 ];
 
 const renderLine = (line: string, i: number) => {
@@ -49,20 +49,30 @@ const renderLine = (line: string, i: number) => {
 
     if (match[1]) {
       text = match[1];
-      className = "text-[16px] text-terminal-accent-200";  // ** = blue
+      className = "text-[16px] text-foreground";  // ** = bold white
     } else if (match[2]) {
       text = match[2];
-      className = "text-gray-500";                      // ## = gray
+      className = "text-gray-500";                // ## = gray
     } else {
       text = match[3];
-      className = "text-terminal-success";              // ++ = green
+      className = "text-terminal-accent/80";        // ++ = green
     }
 
     parts.push(
-      <span key={`${i}-b-${match.index}`} className={className}>
+      <span
+        key={`${i}-b-${match.index}`}
+        style={{ fontWeight: match[1] ? 1000 : 600 }}
+        className={className}
+      >
         {text}
       </span>
     );
+
+    // parts.push(
+    //   <span key={`${i}-b-${match.index}`} className={className}>
+    //     {text}
+    //   </span>
+    // );
 
     last = match.index + match[0].length;
   }
@@ -78,7 +88,11 @@ const renderLine = (line: string, i: number) => {
   );
 };
 
-const Terminal = () => {
+interface TerminalProps {
+  onBootComplete?: () => void;
+}
+
+const Terminal = ({ onBootComplete }: TerminalProps) => {
   const [phase, setPhase] = useState<'boot' | 'ready'>('boot');
   const [entries, setEntries] = useState<TerminalEntry[]>([]);
   const [input, setInput] = useState('');
@@ -99,6 +113,9 @@ const Terminal = () => {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 🔥 Scroll control state
+  const [disableAutoScroll, setDisableAutoScroll] = useState(false);
 
   const ghostSuffix = useMemo(() => {
     if (matches.length === 0) return '';
@@ -169,10 +186,10 @@ const Terminal = () => {
   useEffect(() => {
   if (!scrollRef.current) return;
 
-  if (lastCmd === 'all-info') return; // 🚫 disable scroll
+  if (disableAutoScroll) return; // 🚫 disable scroll when flag is set
 
   scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [entries, phase, showInput, lastCmd]);
+  }, [entries, phase, showInput, disableAutoScroll]);
 
   // Focus input
   const focusInput = useCallback(() => {
@@ -183,7 +200,11 @@ const Terminal = () => {
     setEntries([{ id: 0, isNeofetch: true }]);
     setEntryCounter(1);
     setPhase('ready');
-  }, []);
+    // Trigger callback to notify parent that boot is complete
+    if (onBootComplete) {
+      onBootComplete();
+    }
+  }, [onBootComplete]);
 
   // const runCommand = useCallback((cmd: string) => {
   //   const result = executeCommand(cmd);
@@ -196,9 +217,54 @@ const Terminal = () => {
   //     return;
   //   }
   const runCommand = useCallback((cmd: string) => {
+    const normalizedCmd = cmd.trim().toLowerCase();
+
+    // 🔥 Special handling for all-info: clear → neofetch → content
+    if (normalizedCmd === 'all-info') {
+      // Disable auto-scroll for all-info output
+      setDisableAutoScroll(true);
+      
+      // Step 1: Clear screen immediately
+      setEntries([]);
+
+      // Step 2: Show neofetch after a brief delay
+      setTimeout(() => {
+        setEntries([{ id: 0, isNeofetch: true }]);
+
+        // Step 3: Show all-info content after neofetch
+        setTimeout(() => {
+          const result = executeCommand(cmd);
+
+          const newEntry: TerminalEntry = {
+            id: entryCounter,
+            command: cmd,
+            output: result.content,
+          };
+
+          setEntries(prev => [...prev, newEntry]);
+          setEntryCounter(prev => prev + 1);
+          setInput('');
+          setBaseInput('');
+          setMatches([]);
+          setSuggestIndex(0);
+          setIsFlowActive(false);
+          setHistoryIndex(-1);
+          if (cmd) setHistory(prev => [...prev, cmd]);
+        }, 50);
+      }, 50);
+
+      return;
+    }
+
     const result = executeCommand(cmd);
-    setLastCmd(cmd.trim().toLowerCase());
-  
+    setLastCmd(normalizedCmd);
+
+    // Reset scroll for non-all-info commands
+    if (normalizedCmd !== 'all-info') {
+      // setIsFlowActive(false);
+      setDisableAutoScroll(false);
+    }
+
     if (result.type === 'clear') {
         setEntries([]);
         setInput('');
@@ -237,7 +303,6 @@ const Terminal = () => {
     if (cmd) setHistory(prev => [...prev, cmd]);
   
     // Update flow state
-    const normalizedCmd = cmd.trim().toLowerCase();
     setLastExecutedCommand(normalizedCmd);
     
     // Check if command matches expected next in flow
@@ -259,7 +324,7 @@ const Terminal = () => {
     // Note: you could also consider allowing certain "non-breaking" commands that don't affect flow progression, depending on your desired UX. For simplicity, any unexpected command breaks the flow in this implementation.
     // setShowInput(false);
   
-    if (cmd.trim().toLowerCase() !== 'all-info') {
+    if (normalizedCmd !== 'all-info') {
       setShowInput(false);
     
       setTimeout(() => {
@@ -487,6 +552,7 @@ const Terminal = () => {
                 <span className="text-foreground">$ </span>
                 <div className="relative flex-1 ml-1 min-w-0">
                   <input
+                    id="terminal-input"
                     ref={inputRef}
                     type="text"
                     value={input}
